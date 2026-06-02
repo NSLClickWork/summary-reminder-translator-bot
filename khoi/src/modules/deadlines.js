@@ -126,7 +126,7 @@ async function handleInteraction(interaction) {
 
         const taskNameInput = new TextInputBuilder()
             .setCustomId('taskName')
-            .setLabel("What is the task?")
+            .setLabel("What is the task (Title)?")
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
 
@@ -135,11 +135,18 @@ async function handleInteraction(interaction) {
             .setLabel("Deadline (e.g. 2026-06-03 or Tomorrow)")
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
+            
+        const notesInput = new TextInputBuilder()
+            .setCustomId('notes')
+            .setLabel("Details / Notes (Optional)")
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(false);
 
         const row1 = new ActionRowBuilder().addComponents(taskNameInput);
         const row2 = new ActionRowBuilder().addComponents(deadlineInput);
+        const row3 = new ActionRowBuilder().addComponents(notesInput);
 
-        modal.addComponents(row1, row2);
+        modal.addComponents(row1, row2, row3);
 
         await interaction.showModal(modal);
     }
@@ -149,18 +156,21 @@ async function handleInteraction(interaction) {
         const assigneeId = interaction.customId.replace('modal_assign_task_', '');
         const taskName = interaction.fields.getTextInputValue('taskName');
         const deadline = interaction.fields.getTextInputValue('deadline');
+        const notes = interaction.fields.getTextInputValue('notes') || '';
         
         try {
-            await base('Tasks').create([
-                {
-                    "fields": {
-                        "Task_Name": taskName,
-                        "Assignee_Slack_ID": assigneeId,
-                        "Deadline": deadline,
-                        "Status": "To Do"
-                    }
-                }
-            ]);
+            const fieldsToSave = {
+                "Task_Name": taskName,
+                "Assignee_Slack_ID": assigneeId,
+                "Deadline": deadline,
+                "Status": "To Do"
+            };
+            
+            if (notes) {
+                fieldsToSave["Notes"] = notes;
+            }
+            
+            await base('Tasks').create([{ "fields": fieldsToSave }]);
             
             await interaction.reply({
                 content: `✅ Successfully assigned **${taskName}** to <@${assigneeId}> with deadline **${deadline}**!`,
