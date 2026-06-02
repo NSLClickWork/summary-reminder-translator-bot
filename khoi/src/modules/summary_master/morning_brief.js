@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
-const { summarizeText } = require('../../ai/engine');
-const { pushDecisionsToAirtable } = require('../../adapters/airtable');
+const { summarizeText } = require('../../../../shared/ai/engine');
+const { pushDecisionsToAirtable } = require('../../../../shared/utils/airtable');
 
 /**
  * Initializes the Morning Brief Cron Job

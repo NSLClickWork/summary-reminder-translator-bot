@@ -1,5 +1,5 @@
 {
-  "name": "nsl_brain_bot",
+  "name": "shared",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -11,12 +11,9 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "@slack/bolt": "^4.7.3",
     "airtable": "^0.12.2",
-    "discord.js": "^14.26.4",
     "dotenv": "^17.4.2",
-    "node-cron": "^4.2.1",
-    "node-schedule": "^2.1.1",
-    "openai": "^6.39.1"
+    "groq-sdk": "^1.2.1",
+    "openai": "^6.41.0"
   }
 }
