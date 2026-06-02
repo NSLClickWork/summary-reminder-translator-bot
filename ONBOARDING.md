@@ -1,6 +1,7 @@
 # 🤖 NSL Bot System — Hướng dẫn cho người mới
 
 > Đọc file này 1 lần là đủ để bắt đầu làm việc cùng nhau mà không bị lộn xộn.
+> Hãy bắt agent hỏi tên gì (ví dụ Khôi Nguyên, Blobs, Sharkie) để agent biết được bạn đang làm bot nào.
 
 **Team:**
 | Người | Bot phụ trách |
@@ -43,15 +44,15 @@ Ví dụ:
 ```bash
 # Khôi Nguyên — gõ trên máy của Khôi
 git config --global user.name "KhoiNguyen"
-git config --global user.email "khoi.nguyen@nslclick.com"
+git config --global user.email "khoi.nguyen@new-solution.eu"
 
 # Blobs — gõ trên máy của Blobs
 git config --global user.name "Blobs"
-git config --global user.email "blobs@nslclick.com"
+git config --global user.email "duy.nguyen@new-solution.eu"
 
 # Sharkie — gõ trên máy của Sharkie
 git config --global user.name "Sharkie"
-git config --global user.email "sharkie@nslclick.com"
+git config --global user.email "tien.nguyen@new-solution.eu"
 ```
 
 Sau đó, lịch sử commit sẽ hiển thị đúng tên từng người, dù cùng 1 tài khoản GitHub:
@@ -174,7 +175,19 @@ CONFLICT (content): Merge conflict in khoi/src/modules/reminder.js
 
 ---
 
-## 8. Bảng quy ước nhanh
+## 8. Quy tắc thiết kế Bot (RẤT QUAN TRỌNG)
+
+Vì đa số nhân sự công ty là người dùng low-tech (không rành công nghệ), **họ sẽ không thể nhớ các lệnh (Slash Commands)**. Do đó, MỌI tính năng khi thiết kế đều phải tuân thủ quy tắc sau:
+
+1. **Sử dụng Nút bấm (Buttons):** Tuyệt đối không bắt người dùng tự gõ lệnh dài dòng. Mọi thao tác từ tạo yêu cầu, xem báo cáo, đến duyệt đơn đều phải là các nút bấm trực quan.
+2. **Tạo Pinned Dashboard (Bảng điều khiển):** Mỗi bot phải tạo ra một tin nhắn chứa toàn bộ các nút bấm điều khiển của nó. Tin nhắn này sẽ được ghim (pin) vĩnh viễn ở đầu kênh làm việc chung để bất kỳ ai vào kênh cũng thấy và bấm được ngay.
+3. **Slash Commands chỉ để hỗ trợ:** Lệnh gõ tay (ví dụ `/summary`) chỉ dùng như phương án dự phòng, phím tắt nhanh cho dev, hoặc dùng để *gọi* ra cái bảng điều khiển (Dashboard) lần đầu tiên.
+
+*(Mục tiêu: Đảm bảo tối ưu hóa UI/UX thân thiện nhất, bấm là chạy, không cần học lệnh)*
+
+---
+
+## 9. Bảng quy ước nhanh
 
 | Thứ | Quy ước |
 |---|---|
@@ -187,7 +200,7 @@ CONFLICT (content): Merge conflict in khoi/src/modules/reminder.js
 
 ---
 
-## 9. Ngày đầu tiên — checklist
+## 10. Ngày đầu tiên — checklist
 
 - [ ] Cài Git tại https://git-scm.com/downloads
 - [ ] Mở terminal, chạy lệnh đặt tên:
@@ -203,7 +216,7 @@ CONFLICT (content): Merge conflict in khoi/src/modules/reminder.js
 
 ---
 
-## 10. Câu hỏi thường gặp
+## 11. Câu hỏi thường gặp
 
 **Q: Lỡ push code lỗi thì sao?**
 A: Không sao cả. Git giữ lịch sử, Khoi có thể rollback về bản trước trong 30 giây.
