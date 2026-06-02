@@ -101,9 +101,9 @@ function init(summaryBot, reminderBot) {
         await registerSlashCommands(process.env.DISCORD_REMINDER_CLIENT_ID, process.env.DISCORD_REMINDER_TOKEN, reminderCommands);
         
         // Pass reminder bot to the modules to setup their own crons
-        // approvals.register(reminderBot); // Refactoring needed
-        // deadlines.register(reminderBot); // Refactoring needed
-        // sync.register(reminderBot);      // Refactoring needed
+        approvals.register(reminderBot);
+        deadlines.register(reminderBot);
+        sync.register(reminderBot);
     });
 
     reminderBot.on('interactionCreate', async interaction => {
@@ -141,16 +141,27 @@ function init(summaryBot, reminderBot) {
             const btnId = interaction.customId;
             
             if (btnId === 'btn_check_approvals' || btnId.startsWith('btn_review_') || btnId.startsWith('btn_approve_') || btnId.startsWith('btn_reject_')) {
-                // await approvals.handleInteraction(interaction);
-                await interaction.reply({ content: 'Approvals feature is being migrated!', ephemeral: true });
+                await approvals.handleInteraction(interaction);
             } 
             else if (btnId === 'btn_check_deadlines') {
-                // await deadlines.handleInteraction(interaction);
-                await interaction.reply({ content: 'Deadlines feature is being migrated!', ephemeral: true });
+                await deadlines.handleInteraction(interaction);
             }
             else if (btnId === 'btn_trigger_sync') {
-                // await sync.handleInteraction(interaction);
-                await interaction.reply({ content: 'Sync feature is being migrated!', ephemeral: true });
+                await sync.handleInteraction(interaction);
+            }
+        }
+
+        // Handle Channel Select Menus
+        if (interaction.isChannelSelectMenu()) {
+            if (interaction.customId === 'select_sync_channel') {
+                await sync.handleInteraction(interaction);
+            }
+        }
+
+        // Handle Modal Submissions
+        if (interaction.isModalSubmit()) {
+            if (interaction.customId.startsWith('modal_sync_submit_')) {
+                await sync.handleInteraction(interaction);
             }
         }
     });

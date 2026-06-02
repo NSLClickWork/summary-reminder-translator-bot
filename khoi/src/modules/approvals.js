@@ -1,16 +1,14 @@
 const schedule = require('node-schedule');
 const Airtable = require('airtable');
+const { EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 
-function register(slackApp) {
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
+function register(discordApp) {
     // 1. Cron Job: Run at 11:00 AM VN Time (04:00 UTC) every day
-    // node-schedule uses UTC time by default when deployed on a UTC server
     schedule.scheduleJob('0 4 * * *', async () => {
         console.log('⏰ Running Approval Reminder Cron Job');
         try {
-            // Fix #6: Only remind approvals that have been Pending for 7 days or less
-            // to avoid spamming managers about stale tasks every single day.
             const sevenDaysAgo = new Date();
             sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
             const sevenDaysAgoStr = sevenDaysAgo.toISOString().split('T')[0];
@@ -20,154 +18,97 @@ function register(slackApp) {
             }).firstPage();
 
             for (const record of records) {
-                const approverId = record.get('Approver_Slack_ID');
+                const approverId = record.get('Approver_Slack_ID'); // Using Slack ID field but it should contain Discord ID now
                 const taskName = record.get('Task_Name');
                 const requester = record.get('Requester');
                 const recordId = record.getId();
 
                 if (approverId) {
-                    await slackApp.client.chat.postMessage({
-                        channel: approverId,
-                        text: `You have a pending approval: ${taskName}`,
-                        blocks: [
-                            {
-                                type: 'section',
-                                text: {
-                                    type: 'mrkdwn',
-                                    text: `🚨 *Approval Reminder*\n\nYou have a request pending your review.\n*Task:* ${taskName}\n*Requested by:* ${requester || 'Unknown'}`
-                                }
-                            },
-                            {
-                                type: 'actions',
-                                elements: [
-                                    {
-                                        type: 'button',
-                                        text: {
-                                            type: 'plain_text',
-                                            text: 'Approve'
-                                        },
-                                        style: 'primary',
-                                        action_id: `btn_approve_${recordId}`,
-                                        value: recordId
-                                    },
-                                    {
-                                        type: 'button',
-                                        text: {
-                                            type: 'plain_text',
-                                            text: 'Reject'
-                                        },
-                                        style: 'danger',
-                                        action_id: `btn_reject_${recordId}`,
-                                        value: recordId
-                                    }
-                                ]
-                            }
-                        ]
-                    });
+                    try {
+                        const user = await discordApp.users.fetch(approverId);
+                        
+                        const embed = new EmbedBuilder()
+                            .setColor('#ff9900')
+                            .setTitle('🚨 Approval Reminder')
+                            .setDescription(`You have a request pending your review.\n\n**Task:** ${taskName}\n**Requested by:** ${requester || 'Unknown'}`);
+                            
+                        const row = new ActionRowBuilder()
+                            .addComponents(
+                                new ButtonBuilder()
+                                    .setCustomId(`btn_approve_${recordId}`)
+                                    .setLabel('Approve')
+                                    .setStyle(ButtonStyle.Success),
+                                new ButtonBuilder()
+                                    .setCustomId(`btn_reject_${recordId}`)
+                                    .setLabel('Reject')
+                                    .setStyle(ButtonStyle.Danger)
+                            );
+
+                        await user.send({ embeds: [embed], components: [row] });
+                    } catch (e) {
+                        console.error(`Could not DM user ${approverId}:`, e);
+                    }
                 }
             }
         } catch (error) {
             console.error('Error running Approval cron:', error);
         }
     });
+}
 
-    // 2. Action: Check Approvals Button (from App Home)
-    slackApp.action('btn_check_approvals', async ({ ack, body, client }) => {
-        await ack();
-        const userId = body.user.id;
+async function handleInteraction(interaction) {
+    const btnId = interaction.customId;
 
+    if (btnId === 'btn_check_approvals') {
+        const userId = interaction.user.id;
         try {
             const records = await base('Approvals').select({
                 filterByFormula: `AND({Status} = 'Pending', {Approver_Slack_ID} = '${userId}')`
             }).firstPage();
 
-            let blocks = [
-                {
-                    type: 'header',
-                    text: {
-                        type: 'plain_text',
-                        text: '📋 Your Pending Approvals'
-                    }
-                }
-            ];
+            const embed = new EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle('📋 Your Pending Approvals');
+
+            const components = [];
 
             if (records.length === 0) {
-                blocks.push({
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: '✅ You have no pending approvals at the moment! Great job.'
-                    }
-                });
+                embed.setDescription('✅ You have no pending approvals at the moment! Great job.');
             } else {
-                for (const record of records) {
+                embed.setDescription('Here are your pending requests:');
+                
+                records.forEach((record, index) => {
                     const taskName = record.get('Task_Name');
                     const requester = record.get('Requester');
                     const recordId = record.getId();
 
-                    blocks.push({
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*Task:* ${taskName}\n*Requested by:* ${requester || 'Unknown'}`
-                        },
-                        accessory: {
-                            type: 'button',
-                            text: {
-                                type: 'plain_text',
-                                text: 'Review'
-                            },
-                            action_id: `btn_review_${recordId}`,
-                            value: recordId
-                        }
+                    embed.addFields({
+                        name: `${index + 1}. ${taskName}`,
+                        value: `Requested by: ${requester || 'Unknown'}`
                     });
-                }
+
+                    // Add a button for each record (max 5 buttons per row)
+                    if (index < 5) {
+                        if (index === 0) components.push(new ActionRowBuilder());
+                        components[0].addComponents(
+                            new ButtonBuilder()
+                                .setCustomId(`btn_review_${recordId}`)
+                                .setLabel(`Review #${index + 1}`)
+                                .setStyle(ButtonStyle.Primary)
+                        );
+                    }
+                });
             }
 
-            await client.views.open({
-                trigger_id: body.trigger_id,
-                view: {
-                    type: 'modal',
-                    title: {
-                        type: 'plain_text',
-                        text: 'Approvals'
-                    },
-                    close: {
-                        type: 'plain_text',
-                        text: 'Close'
-                    },
-                    blocks: blocks
-                }
-            });
+            await interaction.reply({ embeds: [embed], components: components, ephemeral: true });
         } catch (error) {
             console.error('Error fetching approvals:', error);
-            await client.views.open({
-                trigger_id: body.trigger_id,
-                view: {
-                    type: 'modal',
-                    title: {
-                        type: 'plain_text',
-                        text: 'Approvals'
-                    },
-                    blocks: [
-                        {
-                            type: 'section',
-                            text: {
-                                type: 'mrkdwn',
-                                text: '⚠️ *Database not ready*\nThe `Approvals` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Requester`, `Approver_Slack_ID`, `Status`, `Created_Date`.'
-                            }
-                        }
-                    ]
-                }
-            });
+            await interaction.reply({ content: '⚠️ **Database not ready**\nThe `Approvals` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Requester`, `Approver_Slack_ID`, `Status`, `Created_Date`.', ephemeral: true });
         }
-    });
-
-    // 3. Fix #2: Handle Review button - opens a detail modal with Approve/Reject actions
-    slackApp.action(/btn_review_/, async ({ ack, action, body, client }) => {
-        await ack();
-        const recordId = action.value;
-
+    } 
+    else if (btnId.startsWith('btn_review_')) {
+        const recordId = btnId.replace('btn_review_', '');
+        
         try {
             const record = await base('Approvals').find(recordId);
             const taskName = record.get('Task_Name') || 'Unknown Task';
@@ -175,108 +116,67 @@ function register(slackApp) {
             const status = record.get('Status') || 'Pending';
             const notes = record.get('Notes') || 'No additional notes.';
 
-            await client.views.open({
-                trigger_id: body.trigger_id,
-                view: {
-                    type: 'modal',
-                    title: {
-                        type: 'plain_text',
-                        text: 'Review Request'
-                    },
-                    close: {
-                        type: 'plain_text',
-                        text: 'Back'
-                    },
-                    blocks: [
-                        {
-                            type: 'section',
-                            fields: [
-                                {
-                                    type: 'mrkdwn',
-                                    text: `*Task:*\n${taskName}`
-                                },
-                                {
-                                    type: 'mrkdwn',
-                                    text: `*Requested by:*\n${requester}`
-                                },
-                                {
-                                    type: 'mrkdwn',
-                                    text: `*Current Status:*\n${status}`
-                                }
-                            ]
-                        },
-                        {
-                            type: 'section',
-                            text: {
-                                type: 'mrkdwn',
-                                text: `*Notes:*\n${notes}`
-                            }
-                        },
-                        {
-                            type: 'divider'
-                        },
-                        {
-                            type: 'actions',
-                            elements: [
-                                {
-                                    type: 'button',
-                                    text: {
-                                        type: 'plain_text',
-                                        text: '✅ Approve'
-                                    },
-                                    style: 'primary',
-                                    action_id: `btn_approve_${recordId}`,
-                                    value: recordId
-                                },
-                                {
-                                    type: 'button',
-                                    text: {
-                                        type: 'plain_text',
-                                        text: '❌ Reject'
-                                    },
-                                    style: 'danger',
-                                    action_id: `btn_reject_${recordId}`,
-                                    value: recordId
-                                }
-                            ]
-                        }
-                    ]
-                }
-            });
-        } catch (error) {
-            console.error('Error opening review modal:', error);
-        }
-    });
+            const embed = new EmbedBuilder()
+                .setColor('#ffcc00')
+                .setTitle('🔍 Review Request')
+                .addFields(
+                    { name: 'Task', value: taskName, inline: true },
+                    { name: 'Requested by', value: requester, inline: true },
+                    { name: 'Current Status', value: status, inline: true },
+                    { name: 'Notes', value: notes }
+                );
 
-    // Handle Approve action
-    slackApp.action(/btn_approve_/, async ({ ack, action, body, client }) => {
-        await ack();
-        const recordId = action.value;
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId(`btn_approve_${recordId}`)
+                        .setLabel('✅ Approve')
+                        .setStyle(ButtonStyle.Success),
+                    new ButtonBuilder()
+                        .setCustomId(`btn_reject_${recordId}`)
+                        .setLabel('❌ Reject')
+                        .setStyle(ButtonStyle.Danger)
+                );
+
+            // Update the ephemeral message with the review details
+            await interaction.update({ embeds: [embed], components: [row] });
+        } catch (error) {
+            console.error('Error opening review:', error);
+            await interaction.reply({ content: '❌ Failed to load review details.', ephemeral: true });
+        }
+    }
+    else if (btnId.startsWith('btn_approve_')) {
+        const recordId = btnId.replace('btn_approve_', '');
         try {
             await base('Approvals').update(recordId, { Status: 'Approved' });
-            await client.chat.postMessage({
-                channel: body.user.id,
-                text: `✅ You have approved the request. Airtable has been updated.`
-            });
+            
+            const embed = new EmbedBuilder()
+                .setColor('#00ff00')
+                .setTitle('✅ Request Approved')
+                .setDescription('You have approved the request. Airtable has been updated.');
+                
+            await interaction.update({ embeds: [embed], components: [] }); // Remove buttons
         } catch (e) {
             console.error('Error approving record:', e);
+            await interaction.reply({ content: '❌ Failed to approve record.', ephemeral: true });
         }
-    });
-
-    // Handle Reject action
-    slackApp.action(/btn_reject_/, async ({ ack, action, body, client }) => {
-        await ack();
-        const recordId = action.value;
+    }
+    else if (btnId.startsWith('btn_reject_')) {
+        const recordId = btnId.replace('btn_reject_', '');
         try {
             await base('Approvals').update(recordId, { Status: 'Rejected' });
-            await client.chat.postMessage({
-                channel: body.user.id,
-                text: `❌ You have rejected the request. Airtable has been updated.`
-            });
+            
+            const embed = new EmbedBuilder()
+                .setColor('#ff0000')
+                .setTitle('❌ Request Rejected')
+                .setDescription('You have rejected the request. Airtable has been updated.');
+                
+            await interaction.update({ embeds: [embed], components: [] }); // Remove buttons
         } catch (e) {
             console.error('Error rejecting record:', e);
+            await interaction.reply({ content: '❌ Failed to reject record.', ephemeral: true });
         }
-    });
+    }
 }
 
-module.exports = { register };
+module.exports = { register, handleInteraction };

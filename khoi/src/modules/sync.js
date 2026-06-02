@@ -1,119 +1,80 @@
-function register(slackApp) {
-    // 1. Action: Cross-Team Sync Button (from App Home)
-    slackApp.action('btn_cross_team_sync', async ({ ack, body, client }) => {
-        await ack();
-        
-        try {
-            await client.views.open({
-                trigger_id: body.trigger_id,
-                view: {
-                    type: 'modal',
-                    callback_id: 'modal_sync_submit',
-                    title: {
-                        type: 'plain_text',
-                        text: 'Cross-Team Sync'
-                    },
-                    submit: {
-                        type: 'plain_text',
-                        text: 'Send Update'
-                    },
-                    close: {
-                        type: 'plain_text',
-                        text: 'Cancel'
-                    },
-                    blocks: [
-                        {
-                            type: 'section',
-                            text: {
-                                type: 'mrkdwn',
-                                text: 'Share an important update or decision with another team.'
-                            }
-                        },
-                        {
-                            type: 'input',
-                            block_id: 'target_channel_block',
-                            element: {
-                                type: 'channels_select',
-                                action_id: 'target_channel',
-                                placeholder: {
-                                    type: 'plain_text',
-                                    text: 'Select a channel'
-                                }
-                            },
-                            label: {
-                                type: 'plain_text',
-                                text: 'Target Channel'
-                            }
-                        },
-                        {
-                            type: 'input',
-                            block_id: 'message_block',
-                            element: {
-                                type: 'plain_text_input',
-                                action_id: 'message_input',
-                                multiline: true,
-                                placeholder: {
-                                    type: 'plain_text',
-                                    text: 'e.g., Marketing has finalized the Q3 budget.'
-                                }
-                            },
-                            label: {
-                                type: 'plain_text',
-                                text: 'Message / Update'
-                            }
-                        }
-                    ]
-                }
-            });
-        } catch (error) {
-            console.error('Error opening Sync modal:', error);
-        }
-    });
+const { EmbedBuilder, ActionRowBuilder, ChannelSelectMenuBuilder, ChannelType, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
 
-    // 2. Handle Sync Modal Submission
-    slackApp.view('modal_sync_submit', async ({ ack, body, view, client }) => {
-        await ack();
-
-        const channelId = view.state.values.target_channel_block.target_channel.selected_channel;
-        const message = view.state.values.message_block.message_input.value;
-        const sender = body.user.id;
-
-        try {
-            await client.chat.postMessage({
-                channel: channelId,
-                text: `Cross-team update from <@${sender}>`,
-                blocks: [
-                    {
-                        type: 'header',
-                        text: {
-                            type: 'plain_text',
-                            text: '🔄 Cross-Team Update',
-                            emoji: true
-                        }
-                    },
-                    {
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*From:* <@${sender}>\n\n${message}`
-                        }
-                    }
-                ]
-            });
-            
-            // Optionally, send a confirmation to the user
-            await client.chat.postMessage({
-                channel: sender,
-                text: `✅ Your cross-team sync update was successfully sent to <#${channelId}>.`
-            });
-        } catch (error) {
-            console.error('Error sending sync message:', error);
-            await client.chat.postMessage({
-                channel: sender,
-                text: `❌ Failed to send your sync update. Please make sure the bot is invited to the target channel.`
-            });
-        }
-    });
+function register(discordApp) {
+    // No cron jobs for sync
 }
 
-module.exports = { register };
+async function handleInteraction(interaction) {
+    if (interaction.customId === 'btn_trigger_sync') {
+        // Step 1: Ask user to select a channel first (since Modals don't support ChannelSelect)
+        const channelSelect = new ChannelSelectMenuBuilder()
+            .setCustomId('select_sync_channel')
+            .setPlaceholder('Select a target channel to sync with')
+            .addChannelTypes(ChannelType.GuildText);
+            
+        const row = new ActionRowBuilder().addComponents(channelSelect);
+        
+        await interaction.reply({ 
+            content: 'Please select the target channel you want to send your update to:', 
+            components: [row], 
+            ephemeral: true 
+        });
+    }
+    else if (interaction.customId === 'select_sync_channel') {
+        // Step 2: User selected a channel, now open the text input modal
+        const selectedChannelId = interaction.values[0];
+        
+        const modal = new ModalBuilder()
+            .setCustomId(`modal_sync_submit_${selectedChannelId}`)
+            .setTitle('Cross-Team Sync');
+
+        const messageInput = new TextInputBuilder()
+            .setCustomId('message_input')
+            .setLabel('Message / Update')
+            .setPlaceholder('e.g., Marketing has finalized the Q3 budget.')
+            .setStyle(TextInputStyle.Paragraph)
+            .setRequired(true);
+
+        const row = new ActionRowBuilder().addComponents(messageInput);
+        modal.addComponents(row);
+
+        // Show the modal
+        await interaction.showModal(modal);
+    }
+    else if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_sync_submit_')) {
+        // Step 3: Handle modal submission
+        const targetChannelId = interaction.customId.replace('modal_sync_submit_', '');
+        const message = interaction.fields.getTextInputValue('message_input');
+        const senderId = interaction.user.id;
+
+        try {
+            const targetChannel = await interaction.client.channels.fetch(targetChannelId);
+            
+            if (targetChannel) {
+                const embed = new EmbedBuilder()
+                    .setColor('#9900ff')
+                    .setTitle('🔄 Cross-Team Update')
+                    .setDescription(message)
+                    .setFooter({ text: `Update from @${interaction.user.username}` })
+                    .setTimestamp();
+                    
+                await targetChannel.send({
+                    content: `Cross-team update from <@${senderId}>`,
+                    embeds: [embed]
+                });
+                
+                await interaction.reply({ content: `✅ Your cross-team sync update was successfully sent to <#${targetChannelId}>.`, ephemeral: true });
+                
+                // Optionally delete the original channel select message if needed
+                // But interaction.reply already resolves the modal interaction.
+            } else {
+                await interaction.reply({ content: `❌ Could not find the target channel.`, ephemeral: true });
+            }
+        } catch (error) {
+            console.error('Error sending sync message:', error);
+            await interaction.reply({ content: `❌ Failed to send your sync update. Please make sure the bot has permissions in that channel.`, ephemeral: true });
+        }
+    }
+}
+
+module.exports = { register, handleInteraction };

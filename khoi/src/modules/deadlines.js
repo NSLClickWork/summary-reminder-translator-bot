@@ -1,9 +1,10 @@
 const schedule = require('node-schedule');
 const Airtable = require('airtable');
+const { EmbedBuilder } = require('discord.js');
 
-function register(slackApp) {
-    const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
+const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
+function register(discordApp) {
     // 1. Cron Job: Run at 11:00 AM VN Time (04:00 UTC) every day
     schedule.scheduleJob('0 4 * * *', async () => {
         console.log('⏰ Running Deadline Monitor Cron Job');
@@ -20,45 +21,36 @@ function register(slackApp) {
             const tomorrowStr = tomorrow.toISOString().split('T')[0];
 
             for (const record of records) {
-                const assigneeId = record.get('Assignee_Slack_ID');
+                const assigneeId = record.get('Assignee_Slack_ID'); // Using Slack ID field but it should contain Discord ID now
                 const taskName = record.get('Task_Name');
                 const deadline = record.get('Deadline'); // format YYYY-MM-DD
 
                 if (assigneeId && (deadline === todayStr || deadline === tomorrowStr)) {
                     const urgency = deadline === todayStr ? 'TODAY' : 'TOMORROW';
                     
-                    await slackApp.client.chat.postMessage({
-                        channel: assigneeId,
-                        text: `Deadline Reminder: ${taskName} is due ${urgency}`,
-                        blocks: [
-                            {
-                                type: 'header',
-                                text: {
-                                    type: 'plain_text',
-                                    text: '🚨 Deadline Alert',
-                                    emoji: true
-                                }
-                            },
-                            {
-                                type: 'section',
-                                text: {
-                                    type: 'mrkdwn',
-                                    text: `Hi <@${assigneeId}>! Friendly reminder that the following task is due *${urgency}*:\n\n*Task:* ${taskName}\n*Deadline:* ${deadline}`
-                                }
-                            }
-                        ]
-                    });
+                    try {
+                        const user = await discordApp.users.fetch(assigneeId);
+                        
+                        const embed = new EmbedBuilder()
+                            .setColor(deadline === todayStr ? '#ff0000' : '#ff9900')
+                            .setTitle('🚨 Deadline Alert')
+                            .setDescription(`Hi <@${assigneeId}>! Friendly reminder that the following task is due **${urgency}**:\n\n**Task:** ${taskName}\n**Deadline:** ${deadline}`);
+
+                        await user.send({ embeds: [embed] });
+                    } catch (e) {
+                        console.error(`Could not DM user ${assigneeId} for deadline:`, e);
+                    }
                 }
             }
         } catch (error) {
             console.error('Error running Deadline cron:', error);
         }
     });
+}
 
-    // 2. Action: Check Deadlines Button (from App Home)
-    slackApp.action('btn_check_deadlines', async ({ ack, body, client }) => {
-        await ack();
-        const userId = body.user.id;
+async function handleInteraction(interaction) {
+    if (interaction.customId === 'btn_check_deadlines') {
+        const userId = interaction.user.id;
         
         try {
             const records = await base('Tasks').select({
@@ -66,78 +58,33 @@ function register(slackApp) {
                 sort: [{field: "Deadline", direction: "asc"}]
             }).firstPage();
 
-            let blocks = [
-                {
-                    type: 'header',
-                    text: {
-                        type: 'plain_text',
-                        text: '⏳ Your Active Tasks'
-                    }
-                }
-            ];
+            const embed = new EmbedBuilder()
+                .setColor('#ff3333')
+                .setTitle('⏳ Your Active Tasks');
 
             if (records.length === 0) {
-                blocks.push({
-                    type: 'section',
-                    text: {
-                        type: 'mrkdwn',
-                        text: '🎉 You have no pending tasks or deadlines! Enjoy your day.'
-                    }
-                });
+                embed.setDescription('🎉 You have no pending tasks or deadlines! Enjoy your day.');
             } else {
-                for (const record of records) {
+                embed.setDescription('Here are your pending tasks sorted by deadline:');
+                
+                records.forEach((record, index) => {
                     const taskName = record.get('Task_Name');
                     const deadline = record.get('Deadline') || 'No deadline';
                     const status = record.get('Status') || 'To Do';
 
-                    blocks.push({
-                        type: 'section',
-                        text: {
-                            type: 'mrkdwn',
-                            text: `*Task:* ${taskName}\n*Deadline:* ${deadline}\n*Status:* ${status}`
-                        }
+                    embed.addFields({
+                        name: `${index + 1}. ${taskName}`,
+                        value: `**Deadline:** ${deadline}\n**Status:** ${status}`
                     });
-                }
+                });
             }
 
-            await client.views.open({
-                trigger_id: body.trigger_id,
-                view: {
-                    type: 'modal',
-                    title: {
-                        type: 'plain_text',
-                        text: 'My Deadlines'
-                    },
-                    close: {
-                        type: 'plain_text',
-                        text: 'Close'
-                    },
-                    blocks: blocks
-                }
-            });
+            await interaction.reply({ embeds: [embed], ephemeral: true });
         } catch (error) {
             console.error('Error fetching tasks:', error);
-            await client.views.open({
-                trigger_id: body.trigger_id,
-                view: {
-                    type: 'modal',
-                    title: {
-                        type: 'plain_text',
-                        text: 'My Deadlines'
-                    },
-                    blocks: [
-                        {
-                            type: 'section',
-                            text: {
-                                type: 'mrkdwn',
-                                text: '⚠️ *Database not ready*\nThe `Tasks` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Assignee_Slack_ID`, `Deadline`, `Status`.'
-                            }
-                        }
-                    ]
-                }
-            });
+            await interaction.reply({ content: '⚠️ **Database not ready**\nThe `Tasks` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Assignee_Slack_ID`, `Deadline`, `Status`.', ephemeral: true });
         }
-    });
+    }
 }
 
-module.exports = { register };
+module.exports = { register, handleInteraction };
