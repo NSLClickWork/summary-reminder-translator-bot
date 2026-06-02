@@ -3,11 +3,11 @@
 > Đọc file này 1 lần là đủ để bắt đầu làm việc cùng nhau mà không bị lộn xộn.
 
 **Team:**
-| Người | Process phụ trách | Bot |
-|---|---|---|
-| **Khôi Nguyên** | COMMS | Summary + Translator |
-| **Blobs** | OPS | Reminder + Payroll + Backup |
-| **Sharkie** | GROWTH | Recruiting + Sales + Content |
+| Người | Bot phụ trách |
+|---|---|
+| **Khôi Nguyên** | Summary, Reminder, Translator |
+| **Blobs** | Backup, Content |
+| **Sharkie** | Payroll, Recruiting, Content |
 
 ---
 
@@ -43,7 +43,7 @@ Ví dụ:
 ```bash
 # Khôi Nguyên — gõ trên máy của Khôi
 git config --global user.name "KhoiNguyen"
-git config --global user.email "khoi@nslclick.com"
+git config --global user.email "khoi.nguyen@nslclick.com"
 
 # Blobs — gõ trên máy của Blobs
 git config --global user.name "Blobs"
@@ -82,21 +82,21 @@ nsl-bot/
 │   ├── data/        → Đọc Google Drive, Outlook, SharePoint
 │   └── utils/       → Airtable, tiện ích chung
 │
-├── comms/           ← KHÔI NGUYÊN phụ trách (Summary + Translator)
+├── khoi/            ← KHÔI NGUYÊN (Summary, Reminder, Translator)
 │   └── src/modules/
 │       ├── summary.js
+│       ├── reminder.js
 │       └── translator.js
 │
-├── ops/             ← BLOBS phụ trách (Reminder + Payroll + Backup)
+├── blobs/           ← BLOBS (Backup, Content)
 │   └── src/modules/
-│       ├── reminder.js
-│       ├── payroll.js
-│       └── backup.js
+│       ├── backup.js
+│       └── content.js
 │
-└── growth/          ← SHARKIE phụ trách (Recruiting + Sales + Content)
+└── sharkie/         ← SHARKIE (Payroll, Recruiting, Content)
     └── src/modules/
+        ├── payroll.js
         ├── recruiting.js
-        ├── sales.js
         └── content.js
 ```
 
@@ -107,9 +107,9 @@ nsl-bot/
 
 | Folder | Chủ sở hữu | Được phép sửa |
 |---|---|---|
-| `comms/` | Khôi Nguyên | Chỉ Khôi Nguyên |
-| `ops/` | Blobs | Chỉ Blobs |
-| `growth/` | Sharkie | Chỉ Sharkie |
+| `khoi/` | Khôi Nguyên | Chỉ Khôi Nguyên |
+| `blobs/` | Blobs | Chỉ Blobs |
+| `sharkie/` | Sharkie | Chỉ Sharkie |
 | `shared/` | Cả team | Phải hỏi cả nhóm trước |
 
 ---
@@ -122,9 +122,9 @@ git pull
 
 # Trong ngày — sau khi sửa xong một tính năng
 git add .
-git commit -m "[ops] thêm nhắc deadline tự động"   # Blobs
-git commit -m "[comms] thêm lệnh /summary"         # Khôi Nguyên
-git commit -m "[growth] thêm lọc CV tự động"       # Sharkie
+git commit -m "[blobs] thêm tính năng backup"       # Blobs
+git commit -m "[khoi] thêm lệnh /summary"           # Khôi Nguyên
+git commit -m "[sharkie] thêm lọc CV tự động"       # Sharkie
 git push
 ```
 
@@ -138,10 +138,10 @@ Format bắt buộc: `[tên-process] mô tả ngắn bằng tiếng Anh`
 
 ```bash
 # ✅ Đúng
-git commit -m "[ops] fix deadline reminder timezone bug"     # Blobs
-git commit -m "[comms] add /summary slash command"           # Khôi Nguyên
+git commit -m "[blobs] fix backup timezone bug"              # Blobs
+git commit -m "[khoi] add /summary slash command"            # Khôi Nguyên
 git commit -m "[shared] add Microsoft Graph auth"            # ai cũng được
-git commit -m "[growth] WIP: recruiting CV screener"         # Sharkie
+git commit -m "[sharkie] WIP: recruiting CV screener"        # Sharkie
 
 # ❌ Sai — không biết ai làm gì
 git commit -m "fix bug"
@@ -167,12 +167,7 @@ Vì `shared/` ảnh hưởng đến **cả 3 người**, bạn phải:
 
 Đây là trường hợp hiếm gặp nếu ai giữ đúng folder của mình. Nhưng nếu xảy ra, Git sẽ báo:
 ```
-CONFLICT (content): Merge conflict in ops/src/modules/reminder.js
-```
-
-Đây là trường hợp hiếm gặp nếu ai giữ đúng folder của mình. Nhưng nếu xảy ra, Git sẽ báo:
-```
-CONFLICT (content): Merge conflict in ops/src/modules/reminder.js
+CONFLICT (content): Merge conflict in khoi/src/modules/reminder.js
 ```
 
 **Không cần hoảng loạn.** Nhắn cho Khôi Nguyên, 2 người mở file đó lên và chọn giữ đoạn code nào. Git có hướng dẫn rõ ràng trong file bị conflict.
