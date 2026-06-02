@@ -132,7 +132,7 @@ async function handleInteraction(interaction) {
 
         const deadlineInput = new TextInputBuilder()
             .setCustomId('deadline')
-            .setLabel("Deadline (e.g. 2026-06-03 or Tomorrow)")
+            .setLabel("Deadline (VD: 03/06/2026 hoặc Tomorrow)")
             .setStyle(TextInputStyle.Short)
             .setRequired(true);
             
@@ -155,14 +155,38 @@ async function handleInteraction(interaction) {
     if (interaction.isModalSubmit() && interaction.customId.startsWith('modal_assign_task_')) {
         const assigneeId = interaction.customId.replace('modal_assign_task_', '');
         const taskName = interaction.fields.getTextInputValue('taskName');
-        const deadline = interaction.fields.getTextInputValue('deadline');
+        const rawDeadline = interaction.fields.getTextInputValue('deadline');
         const notes = interaction.fields.getTextInputValue('notes') || '';
+        
+        // Parse date
+        let parsedDeadline = rawDeadline;
+        const lowerDeadline = rawDeadline.toLowerCase().trim();
+        const today = new Date();
+        
+        if (lowerDeadline === 'today' || lowerDeadline === 'hôm nay') {
+            parsedDeadline = today.toISOString().split('T')[0];
+        } else if (lowerDeadline === 'tomorrow' || lowerDeadline === 'ngày mai') {
+            const tmr = new Date(today);
+            tmr.setDate(tmr.getDate() + 1);
+            parsedDeadline = tmr.toISOString().split('T')[0];
+        } else {
+            // Check for DD/MM/YYYY or D/M/YYYY
+            const parts = rawDeadline.split('/');
+            if (parts.length === 3) {
+                const day = parts[0].padStart(2, '0');
+                const month = parts[1].padStart(2, '0');
+                const year = parts[2];
+                if (year.length === 4) {
+                    parsedDeadline = `${year}-${month}-${day}`;
+                }
+            }
+        }
         
         try {
             const fieldsToSave = {
                 "Task_Name": taskName,
                 "Assignee_Slack_ID": assigneeId,
-                "Deadline": deadline,
+                "Deadline": parsedDeadline,
                 "Status": "To Do"
             };
             
@@ -173,7 +197,7 @@ async function handleInteraction(interaction) {
             await base('Tasks').create([{ "fields": fieldsToSave }]);
             
             await interaction.reply({
-                content: `✅ Successfully assigned **${taskName}** to <@${assigneeId}> with deadline **${deadline}**!`,
+                content: `✅ Successfully assigned **${taskName}** to <@${assigneeId}> with deadline **${parsedDeadline}**!`,
                 ephemeral: true
             });
             
@@ -186,7 +210,7 @@ async function handleInteraction(interaction) {
                     .setDescription(`You have been assigned a new task by <@${interaction.user.id}>.`)
                     .addFields(
                         { name: 'Task', value: taskName },
-                        { name: 'Deadline', value: deadline }
+                        { name: 'Deadline', value: parsedDeadline }
                     );
                 await user.send({ embeds: [embed] });
             } catch (err) {
