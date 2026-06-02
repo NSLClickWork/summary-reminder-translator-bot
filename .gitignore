@@ -20,3 +20,7 @@ Thumbs.db
 
 # Data state files (runtime generated)
 src/data/summary_state.json
+
+# Local documents and scripts
+*.docx
+*.bat
