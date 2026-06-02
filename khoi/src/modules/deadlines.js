@@ -88,6 +88,20 @@ async function handleInteraction(interaction) {
     
     // Step 1: Assign Task Button clicked
     if (interaction.isButton() && interaction.customId === 'btn_assign_task') {
+        const member = interaction.member;
+        
+        // Check if user has permission (CEO, CEO Assistant, Admin, or IT for testing)
+        const hasPermission = member.roles.cache.some(role => 
+            ['CEO', 'CEO Assistant', 'Admin', 'IT'].includes(role.name)
+        );
+
+        if (!hasPermission) {
+            return await interaction.reply({ 
+                content: '🚫 **Access Denied:** Only the Management Team (CEO) can assign tasks!', 
+                ephemeral: true 
+            });
+        }
+
         const row = new ActionRowBuilder()
             .addComponents(
                 new UserSelectMenuBuilder()
