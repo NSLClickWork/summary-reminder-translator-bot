@@ -126,6 +126,10 @@ function init(summaryBot, reminderBot) {
                             .setLabel('⏰ Check Deadlines')
                             .setStyle(ButtonStyle.Danger),
                         new ButtonBuilder()
+                            .setCustomId('btn_assign_task')
+                            .setLabel('✍️ Assign Task')
+                            .setStyle(ButtonStyle.Secondary),
+                        new ButtonBuilder()
                             .setCustomId('btn_trigger_sync')
                             .setLabel('🔄 Trigger Sync')
                             .setStyle(ButtonStyle.Success)
@@ -143,7 +147,7 @@ function init(summaryBot, reminderBot) {
             if (btnId === 'btn_check_approvals' || btnId.startsWith('btn_review_') || btnId.startsWith('btn_approve_') || btnId.startsWith('btn_reject_')) {
                 await approvals.handleInteraction(interaction);
             } 
-            else if (btnId === 'btn_check_deadlines') {
+            else if (btnId === 'btn_check_deadlines' || btnId === 'btn_assign_task') {
                 await deadlines.handleInteraction(interaction);
             }
             else if (btnId === 'btn_trigger_sync') {
@@ -157,11 +161,20 @@ function init(summaryBot, reminderBot) {
                 await sync.handleInteraction(interaction);
             }
         }
+        
+        // Handle User Select Menus
+        if (interaction.isUserSelectMenu()) {
+            if (interaction.customId === 'select_assignee') {
+                await deadlines.handleInteraction(interaction);
+            }
+        }
 
         // Handle Modal Submissions
         if (interaction.isModalSubmit()) {
             if (interaction.customId.startsWith('modal_sync_submit_')) {
                 await sync.handleInteraction(interaction);
+            } else if (interaction.customId.startsWith('modal_assign_task_')) {
+                await deadlines.handleInteraction(interaction);
             }
         }
     });
