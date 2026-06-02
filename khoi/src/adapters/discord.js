@@ -1,4 +1,4 @@
-const { REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder } = require('discord.js');
+const { REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GatewayIntentBits, Partials, ApplicationCommandType } = require('discord.js');
 const schedule = require('node-schedule');
 
 // Import logic from modules (will be refactored to support Discord instead of Slack)
@@ -6,13 +6,30 @@ const morningBrief = require('../modules/summary_master/morning_brief');
 const approvals = require('../modules/approvals');
 const deadlines = require('../modules/deadlines');
 const sync = require('../modules/sync');
+const translator = require('../modules/translator');
 
-// Slash commands to register
-const commands = [
+// Slash commands for Summary Bot
+const summaryCommands = [
     {
         name: 'summary',
         description: 'Get an immediate summary of yesterday\'s activities',
     },
+    {
+        name: 'Translate to 🇻🇳',
+        type: ApplicationCommandType.Message,
+    },
+    {
+        name: 'Translate to 🇺🇸',
+        type: ApplicationCommandType.Message,
+    },
+    {
+        name: 'Translate to 🇩🇪',
+        type: ApplicationCommandType.Message,
+    }
+];
+
+// Slash commands for Reminder Bot
+const reminderCommands = [
     {
         name: 'setup_reminder_dashboard',
         description: 'Deploy the Pinned Dashboard for the Reminder Bot (Admin only)',
@@ -22,11 +39,11 @@ const commands = [
 /**
  * Register slash commands globally for the bot
  */
-async function registerSlashCommands(clientId, token) {
+async function registerSlashCommands(clientId, token, botCommands) {
     const rest = new REST({ version: '10' }).setToken(token);
     try {
         console.log(`Started refreshing application (/) commands for client ${clientId}.`);
-        await rest.put(Routes.applicationCommands(clientId), { body: commands });
+        await rest.put(Routes.applicationCommands(clientId), { body: botCommands });
         console.log(`Successfully reloaded application (/) commands for client ${clientId}.`);
     } catch (error) {
         console.error(error);
@@ -45,13 +62,18 @@ function init(summaryBot, reminderBot) {
     // ==========================================
     summaryBot.on('ready', async () => {
         console.log(`[Summary Bot] Logged in as ${summaryBot.user.tag}!`);
-        await registerSlashCommands(process.env.DISCORD_SUMMARY_CLIENT_ID, process.env.DISCORD_SUMMARY_TOKEN);
+        await registerSlashCommands(process.env.DISCORD_SUMMARY_CLIENT_ID, process.env.DISCORD_SUMMARY_TOKEN, summaryCommands);
         
         // Init the cron job for Morning Brief (using discord client instead of slack)
         // morningBrief.initMorningBrief(summaryBot, [], ''); // Refactoring needed inside
     });
 
     summaryBot.on('interactionCreate', async interaction => {
+        if (interaction.isMessageContextMenuCommand()) {
+            await translator.handleContextMenu(interaction);
+            return;
+        }
+
         if (!interaction.isChatInputCommand()) return;
 
         if (interaction.commandName === 'summary') {
@@ -59,8 +81,7 @@ function init(summaryBot, reminderBot) {
             
             // Call the refactored runMorningBrief passing interaction instead of slack client
             try {
-                // await morningBrief.runMorningBrief(interaction);
-                await interaction.editReply('✅ Summary feature is currently being migrated to Discord!');
+                await morningBrief.runMorningBrief(interaction);
             } catch (err) {
                 console.error(err);
                 await interaction.editReply('❌ An error occurred while generating the summary.');
@@ -68,12 +89,16 @@ function init(summaryBot, reminderBot) {
         }
     });
 
+    summaryBot.on('messageReactionAdd', async (reaction, user) => {
+        await translator.handleReactionAdd(reaction, user);
+    });
+
     // ==========================================
     // REMINDER BOT EVENTS
     // ==========================================
     reminderBot.on('ready', async () => {
         console.log(`[Reminder Bot] Logged in as ${reminderBot.user.tag}!`);
-        await registerSlashCommands(process.env.DISCORD_REMINDER_CLIENT_ID, process.env.DISCORD_REMINDER_TOKEN);
+        await registerSlashCommands(process.env.DISCORD_REMINDER_CLIENT_ID, process.env.DISCORD_REMINDER_TOKEN, reminderCommands);
         
         // Pass reminder bot to the modules to setup their own crons
         // approvals.register(reminderBot); // Refactoring needed

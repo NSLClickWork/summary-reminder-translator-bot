@@ -39,64 +39,49 @@ function initMorningBrief(client, targetChannels, reportChannel) {
 }
 
 /**
- * Fetches yesterday's data and generates a summary report
+ * Fetches yesterday's (or recent) data and generates a summary report for Discord
  */
-async function runMorningBrief(client, targetChannels, reportChannel, useToday = false) {
-    const now = new Date();
-    const targetDate = new Date(now);
-    if (!useToday) {
-        targetDate.setDate(targetDate.getDate() - 1);
-    }
-
-    // Set time window from 00:00:00 to 23:59:59 of the target day
-    targetDate.setHours(0, 0, 0, 0);
-    const oldestTs = targetDate.getTime() / 1000;
-
-    targetDate.setHours(23, 59, 59, 999);
-    const latestTs = targetDate.getTime() / 1000;
-
+async function runMorningBrief(interaction) {
+    const channel = interaction.channel;
+    
+    // In Discord, fetching by date requires snowflake math, or we just fetch the last 100 messages for the demo.
+    // Let's fetch the last 100 messages to quickly summarize the channel.
     let combinedText = '';
-    let activeChannelCount = 0;
-
-    for (const channelId of targetChannels) {
-        try {
-            const history = await client.conversations.history({
-                channel: channelId,
-                oldest: oldestTs.toString(),
-                latest: latestTs.toString(),
-                limit: 500
-            });
-
-            if (history.messages && history.messages.length > 0) {
-                activeChannelCount++;
-                combinedText += `\n--- Messages from channel ${channelId} ---\n`;
-                const messages = history.messages.reverse();
-                for (const msg of messages) {
-                    if (msg.user) {
-                        combinedText += `User ${msg.user}: ${msg.text}\n`;
-                    }
+    
+    try {
+        const messages = await channel.messages.fetch({ limit: 100 });
+        
+        if (messages.size > 0) {
+            combinedText += `\n--- Messages from channel #${channel.name} ---\n`;
+            // Discord messages are fetched newest first. Reverse them for chronological order.
+            const sortedMessages = Array.from(messages.values()).reverse();
+            for (const msg of sortedMessages) {
+                if (!msg.author.bot) { // ignore bot messages
+                    combinedText += `User ${msg.author.username}: ${msg.content}\n`;
                 }
-            } else {
-                // Skip channels with no activity (per user preference)
-                console.log(`⏭️  Channel ${channelId} had no messages yesterday. Skipping.`);
             }
-        } catch (err) {
-            console.error(`Error fetching history for channel ${channelId}:`, err.message);
         }
+    } catch (err) {
+        console.error(`Error fetching history for channel ${channel.id}:`, err.message);
+        throw err;
     }
 
     if (combinedText.trim() === '') {
-        console.log('No messages found across any channel. Skipping Morning Brief report.');
+        await interaction.editReply('No human messages found in this channel recently. Skipping summary.');
         return;
     }
 
-    const prompt = `You are an Executive Assistant preparing a Morning Brief for the CEO. Read the following conversation logs from yesterday.
+    const prompt = `You are an Executive Assistant preparing a Summary Brief for the CEO. Read the following conversation logs.
 Your task is to analyze the text and output a structured report in English.
 
 CRITICAL INSTRUCTIONS:
 1. OVERVIEW: Write a concise summary of the main events, topics, or issues discussed.
 2. DECISIONS & ACTION ITEMS: Explicitly extract and list any final decisions made, and any action items (who needs to do what).
 3. If the logs are just test messages or casual greetings, state that there were no significant business activities.
+
+--- LOGS START ---
+${combinedText}
+--- LOGS END ---
 
 Format your response exactly like this:
 *🌅 MORNING BRIEF: YESTERDAY'S RECAP*
@@ -107,23 +92,18 @@ Format your response exactly like this:
 *✅ Decisions & Action Items:*
 - [Decision/Action 1]
 - [Decision/Action 2]
+`;
 
-Conversation Logs:
-${combinedText}`;
+    const aiSummary = await summarizeText(prompt);
 
-    const summary = await summarizeText(prompt);
-
-    await client.chat.postMessage({
-        channel: reportChannel,
-        text: summary
-    });
-    console.log('✅ Morning Brief sent successfully!');
+    // Post the result back via the interaction
+    await interaction.editReply(`**Daily Summary for #${channel.name}**\n\n${aiSummary}`);
 
     // Extract Decisions to push to Airtable
     const decisions = [];
-    const decisionSectionIndex = summary.indexOf('*✅ Decisions & Action Items:*');
+    const decisionSectionIndex = aiSummary.indexOf('*✅ Decisions & Action Items:*');
     if (decisionSectionIndex !== -1) {
-        const decisionText = summary.substring(decisionSectionIndex);
+        const decisionText = aiSummary.substring(decisionSectionIndex);
         const lines = decisionText.split('\n');
         for (const line of lines) {
             const trimmedLine = line.trim();
@@ -134,7 +114,7 @@ ${combinedText}`;
     }
 
     if (decisions.length > 0) {
-        await pushDecisionsToAirtable(decisions, targetChannels.join(', '));
+        await pushDecisionsToAirtable(decisions, `#${channel.name}`);
     }
 }
 

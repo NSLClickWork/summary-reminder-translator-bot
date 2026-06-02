@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
+const { Client, GatewayIntentBits, Partials } = require('discord.js');
 const discordAdapter = require('./src/adapters/discord');
 
 // Initialize Summary Bot
@@ -8,7 +8,9 @@ const summaryBot = new Client({
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildMessageReactions,
     ],
+    partials: [Partials.Message, Partials.Reaction, Partials.User],
 });
 
 // Initialize Reminder Bot
