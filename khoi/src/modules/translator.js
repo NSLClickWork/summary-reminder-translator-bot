@@ -1,4 +1,5 @@
 const { translateText } = require('../../../shared/ai/engine');
+const { EmbedBuilder } = require('discord.js');
 
 const flagMap = {
     '🇻🇳': 'Vietnamese',
@@ -68,7 +69,17 @@ async function handleContextMenu(interaction) {
 
         const translatedResult = await translateText(textToTranslate, targetLang);
         
-        await interaction.editReply(`**${interaction.commandName}:**\n${translatedResult}`);
+        const snippet = textToTranslate.length > 300 ? textToTranslate.substring(0, 300) + '...' : textToTranslate;
+        
+        const embed = new EmbedBuilder()
+            .setColor('#10b981') // Green success color
+            .setTitle(interaction.commandName)
+            .addFields(
+                { name: '📝 Bản gốc (Trích đoạn)', value: `> ${snippet.replace(/\n/g, '\n> ')}` },
+                { name: '🌐 Bản dịch', value: translatedResult }
+            );
+            
+        await interaction.editReply({ content: '', embeds: [embed] });
     } catch (error) {
         console.error('Context Menu Translation error:', error);
         await interaction.editReply('❌ Failed to translate the message.');
