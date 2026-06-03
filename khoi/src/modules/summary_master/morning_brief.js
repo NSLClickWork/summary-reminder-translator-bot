@@ -7,10 +7,10 @@ const { pushDecisionsToAirtable } = require('../../../../shared/utils/airtable')
  * @param {import('discord.js').Client} client - Discord Client
  */
 function initMorningBrief(client) {
-    console.log('⏰ Initializing Morning Brief cron job (Runs everyday at 08:00 AM VN / 01:00 AM UTC)...');
+    console.log('⏰ Initializing Morning Brief cron job (Runs everyday at 11:00 AM VN / 06:00 AM GER / 04:00 AM UTC)...');
 
-    // 8:00 AM Vietnam Time (UTC+7) = 01:00 AM UTC
-    schedule.scheduleJob('0 1 * * *', async () => {
+    // 11:00 AM Vietnam Time (UTC+7) = 04:00 AM UTC
+    schedule.scheduleJob('0 4 * * *', async () => {
         try {
             console.log('🚀 Running Morning Brief task...');
             // Fetch summary for #operations and post to #daily-summary
