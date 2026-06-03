@@ -65,7 +65,7 @@ function init(summaryBot, reminderBot) {
         await registerSlashCommands(process.env.DISCORD_SUMMARY_CLIENT_ID, process.env.DISCORD_SUMMARY_TOKEN, summaryCommands);
         
         // Init the cron job for Morning Brief (using discord client instead of slack)
-        // morningBrief.initMorningBrief(summaryBot, [], ''); // Refactoring needed inside
+        morningBrief.initMorningBrief(summaryBot);
     });
 
     summaryBot.on('interactionCreate', async interaction => {

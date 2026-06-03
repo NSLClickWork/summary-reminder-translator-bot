@@ -4,38 +4,85 @@ const { pushDecisionsToAirtable } = require('../../../../shared/utils/airtable')
 
 /**
  * Initializes the Morning Brief Cron Job
- * @param {object} client - Slack WebClient
- * @param {Array<string>} targetChannels - List of channel IDs to scan
- * @param {string} reportChannel - Channel ID to send the final report to
+ * @param {import('discord.js').Client} client - Discord Client
  */
-function initMorningBrief(client, targetChannels, reportChannel) {
-    // Read channel config from .env if not passed directly
-    const channels = targetChannels.length > 0
-        ? targetChannels
-        : (process.env.MORNING_BRIEF_CHANNELS || '').split(',').map(c => c.trim()).filter(Boolean);
-
-    const report = reportChannel || process.env.MORNING_BRIEF_REPORT_CHANNEL || '';
-
+function initMorningBrief(client) {
     console.log('⏰ Initializing Morning Brief cron job (Runs everyday at 08:00 AM VN / 01:00 AM UTC)...');
 
-    if (channels.length === 0 || !report) {
-        console.warn('⚠️  Morning Brief: No MORNING_BRIEF_CHANNELS or MORNING_BRIEF_REPORT_CHANNEL set in .env. Cron will run but skip silently.');
-    }
-
     // 8:00 AM Vietnam Time (UTC+7) = 01:00 AM UTC
-    // Using node-schedule with UTC time to be deployment-environment agnostic
     schedule.scheduleJob('0 1 * * *', async () => {
         try {
             console.log('🚀 Running Morning Brief task...');
-            if (channels.length === 0 || !report) {
-                console.log('⏭️  Morning Brief skipped: No channels configured.');
-                return;
-            }
-            await runMorningBrief(client, channels, report);
+            // Fetch summary for #operations and post to #daily-summary
+            await runMorningBriefCron(client, ['operations'], 'daily-summary');
         } catch (error) {
             console.error('Error in Morning Brief job:', error);
         }
     });
+}
+
+async function runMorningBriefCron(client, targetChannelNames, reportChannelName) {
+    const reportChannel = client.channels.cache.find(c => c.name === reportChannelName);
+    if (!reportChannel) {
+        console.error(`Morning Brief skipped: Could not find report channel #${reportChannelName}`);
+        return;
+    }
+
+    for (const channelName of targetChannelNames) {
+        const sourceChannel = client.channels.cache.find(c => c.name === channelName);
+        if (!sourceChannel) {
+            console.log(`Skipping #${channelName} (not found)`);
+            continue;
+        }
+
+        let combinedText = '';
+        try {
+            const messages = await sourceChannel.messages.fetch({ limit: 100 });
+            if (messages.size > 0) {
+                const sortedMessages = Array.from(messages.values()).reverse();
+                for (const msg of sortedMessages) {
+                    if (!msg.author.bot) {
+                        combinedText += `User ${msg.author.username}: ${msg.content}\n`;
+                    }
+                }
+            }
+        } catch (err) {
+            console.error(`Error fetching history for channel ${sourceChannel.id}:`, err.message);
+            continue;
+        }
+
+        if (combinedText.trim() === '') {
+            console.log(`No human messages found in #${channelName} recently. Skipping summary.`);
+            continue;
+        }
+
+        const prompt = `You are an Executive Assistant preparing a Summary Brief for the CEO. Read the following conversation logs.
+Your task is to analyze the text and output a structured report in English.
+
+CRITICAL INSTRUCTIONS:
+1. OVERVIEW: Write a concise summary of the main events, topics, or issues discussed.
+2. DECISIONS & ACTION ITEMS: Explicitly extract and list any final decisions made, and any action items (who needs to do what).
+3. If the logs are just test messages or casual greetings, state that there were no significant business activities.
+
+--- LOGS START ---
+${combinedText}
+--- LOGS END ---
+
+Format your response exactly like this:
+*🌅 MORNING BRIEF: YESTERDAY'S RECAP*
+
+*🔹 Overview:*
+[Your overview here]
+
+*✅ Decisions & Action Items:*
+- [Decision/Action 1]
+- [Decision/Action 2]
+`;
+
+        const aiSummary = await summarizeText(prompt);
+
+        await reportChannel.send(`**🌅 Báo cáo tự động cho kênh #${channelName}**\n\n${aiSummary}`);
+    }
 }
 
 /**
