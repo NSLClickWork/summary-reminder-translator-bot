@@ -24,16 +24,19 @@ function initMorningBrief(client) {
 async function runMorningBriefCron(client) {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // List of channels to explicitly ignore
+    const excludeChannels = ['welcome', 'roles-selection', 'daily-summary'];
+
     // Get all text channels
-    const allChannels = client.channels.cache.filter(c => c.isTextBased());
+    const allChannels = client.channels.cache.filter(c => c.isTextBased() && !excludeChannels.includes(c.name));
 
     for (const [id, sourceChannel] of allChannels) {
         let combinedText = '';
         try {
             const messages = await sourceChannel.messages.fetch({ limit: 100 });
             if (messages.size > 0) {
-                // Check if there is at least one human message in the last 24 hours
-                const hasRecentActivity = messages.some(msg => !msg.author.bot && msg.createdAt > oneDayAgo);
+                // Check if there is at least one valid human message in the last 24 hours
+                const hasRecentActivity = messages.some(msg => !msg.author.bot && msg.content.trim() !== '' && msg.createdAt > oneDayAgo);
                 
                 if (!hasRecentActivity) {
                     console.log(`No recent human activity in #${sourceChannel.name || sourceChannel.id}. Skipping.`);
@@ -43,7 +46,7 @@ async function runMorningBriefCron(client) {
                 // If active, combine ALL 100 messages for full context (including older ones)
                 const sortedMessages = Array.from(messages.values()).reverse();
                 for (const msg of sortedMessages) {
-                    if (!msg.author.bot) {
+                    if (!msg.author.bot && msg.content.trim() !== '') {
                         combinedText += `User ${msg.author.username}: ${msg.content}\n`;
                     }
                 }
