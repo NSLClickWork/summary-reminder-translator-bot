@@ -13,50 +13,50 @@ function initMorningBrief(client) {
     schedule.scheduleJob('0 4 * * *', async () => {
         try {
             console.log('🚀 Running Morning Brief task...');
-            // Fetch summary for #operations and post to #daily-summary
-            await runMorningBriefCron(client, ['operations'], 'daily-summary');
+            // Fetch summary for ALL channels and post to #daily-summary
+            await runMorningBriefCron(client, 'daily-summary');
         } catch (error) {
             console.error('Error in Morning Brief job:', error);
         }
     });
 }
 
-async function runMorningBriefCron(client, targetChannelNames, reportChannelName) {
+async function runMorningBriefCron(client, reportChannelName) {
     const reportChannel = client.channels.cache.find(c => c.name === reportChannelName);
     if (!reportChannel) {
         console.error(`Morning Brief skipped: Could not find report channel #${reportChannelName}`);
         return;
     }
 
-    for (const channelName of targetChannelNames) {
-        const sourceChannel = client.channels.cache.find(c => c.name === channelName);
-        if (!sourceChannel) {
-            console.log(`Skipping #${channelName} (not found)`);
-            continue;
-        }
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+    // Get all text channels, excluding the report channel itself to prevent loops
+    const allChannels = client.channels.cache.filter(c => c.isTextBased() && c.name !== reportChannelName);
+
+    for (const [id, sourceChannel] of allChannels) {
         let combinedText = '';
         try {
             const messages = await sourceChannel.messages.fetch({ limit: 100 });
             if (messages.size > 0) {
                 const sortedMessages = Array.from(messages.values()).reverse();
                 for (const msg of sortedMessages) {
-                    if (!msg.author.bot) {
+                    // Only read messages sent by humans in the last 24 hours
+                    if (!msg.author.bot && msg.createdAt > oneDayAgo) {
                         combinedText += `User ${msg.author.username}: ${msg.content}\n`;
                     }
                 }
             }
         } catch (err) {
-            console.error(`Error fetching history for channel ${sourceChannel.id}:`, err.message);
+            console.error(`Error fetching history for channel ${sourceChannel.name || sourceChannel.id}:`, err.message);
             continue;
         }
 
         if (combinedText.trim() === '') {
-            console.log(`No human messages found in #${channelName} recently. Skipping summary.`);
+            console.log(`No human messages found in #${sourceChannel.name} in the last 24h. Skipping summary.`);
             continue;
         }
 
-        const prompt = `You are an Executive Assistant preparing a Summary Brief for the CEO. Read the following conversation logs.
+        const prompt = `You are an Executive Assistant preparing a Summary Brief for the CEO. Read the following conversation logs from channel #${sourceChannel.name}.
 Your task is to analyze the text and output a structured report in English.
 
 CRITICAL INSTRUCTIONS:
@@ -81,7 +81,7 @@ Format your response exactly like this:
 
         const aiSummary = await summarizeText(prompt);
 
-        await reportChannel.send(`**🌅 Báo cáo tự động cho kênh #${channelName}**\n\n${aiSummary}`);
+        await reportChannel.send(`**🌅 Báo cáo tự động cho kênh #${sourceChannel.name}**\n\n${aiSummary}`);
     }
 }
 
