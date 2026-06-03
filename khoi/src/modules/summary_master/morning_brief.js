@@ -166,5 +166,6 @@ Format your response exactly like this:
 
 module.exports = {
     initMorningBrief,
-    runMorningBrief
+    runMorningBrief,
+    runMorningBriefCron
 };

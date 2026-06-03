@@ -15,6 +15,10 @@ const summaryCommands = [
         description: 'Get an immediate summary of yesterday\'s activities',
     },
     {
+        name: 'trigger_morning_brief',
+        description: 'Admin only: Manually trigger the morning brief cron job for all active channels'
+    },
+    {
         name: 'Translate to 🇻🇳',
         type: ApplicationCommandType.Message,
     },
@@ -77,14 +81,37 @@ function init(summaryBot, reminderBot) {
         if (!interaction.isChatInputCommand()) return;
 
         if (interaction.commandName === 'summary') {
-            await interaction.reply({ content: '⏳ Gathering data and summarizing. Please wait...', ephemeral: true });
+            await interaction.deferReply({ ephemeral: true });
             
-            // Call the refactored runMorningBrief passing interaction instead of slack client
             try {
                 await morningBrief.runMorningBrief(interaction);
-            } catch (err) {
-                console.error(err);
+            } catch (error) {
+                console.error(error);
                 await interaction.editReply('❌ An error occurred while generating the summary.');
+            }
+        }
+        
+        if (interaction.commandName === 'trigger_morning_brief') {
+            await interaction.deferReply({ ephemeral: true });
+            
+            // Check if user has permission
+            const member = interaction.member;
+            const hasPermission = member.roles.cache.some(role => 
+                ['CEO', 'CEO Assistant', 'Admin', 'IT'].includes(role.name)
+            );
+
+            if (!hasPermission) {
+                return await interaction.editReply('🚫 **Access Denied:** Only Admins can manually trigger the morning brief.');
+            }
+
+            await interaction.editReply('🚀 Triggering Morning Brief for all active channels... (This might take a moment to scan)');
+            
+            try {
+                await morningBrief.runMorningBriefCron(summaryBot);
+                await interaction.followUp({ content: '✅ Manual Morning Brief trigger completed successfully!', ephemeral: true });
+            } catch (error) {
+                console.error(error);
+                await interaction.followUp({ content: '❌ An error occurred while triggering the summary.', ephemeral: true });
             }
         }
     });
