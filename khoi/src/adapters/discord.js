@@ -128,7 +128,7 @@ function init(summaryBot, reminderBot) {
                 .setDescription(
                     '**Welcome to the Summary Dashboard!**\n\n' +
                     '⚠️ **Warning:** The "Summary All Channels" button will scan ALL active channels and post a summary directly into each channel. / **Cảnh báo:** Nút "Summary All" sẽ quét TOÀN BỘ kênh và gửi thẳng báo cáo vào từng kênh.\n\n' +
-                    'Please use the dropdown menu below to summarize a specific channel instead!'
+                    '👇 **Tip:** Use the dropdown menu below to summarize a specific channel. **You can type the channel name to search! (Gõ tên kênh để tìm nhanh)**'
                 )
                 .setColor('#10b981');
 
@@ -148,7 +148,7 @@ function init(summaryBot, reminderBot) {
                 .addComponents(
                     new ChannelSelectMenuBuilder()
                         .setCustomId('select_summary_channel')
-                        .setPlaceholder('Select a specific channel to summarize...')
+                        .setPlaceholder('🔍 Select or type a channel name to search...')
                         .addChannelTypes(ChannelType.GuildText)
                 );
 
