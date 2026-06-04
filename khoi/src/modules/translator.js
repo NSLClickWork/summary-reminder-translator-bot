@@ -69,15 +69,17 @@ async function handleContextMenu(interaction) {
 
         const translatedResult = await translateText(textToTranslate, targetLang);
         
-        const snippet = textToTranslate.length > 300 ? textToTranslate.substring(0, 300) + '...' : textToTranslate;
+        const snippet = textToTranslate.length > 200 ? textToTranslate.substring(0, 200) + '...' : textToTranslate;
         
+        let description = `**📝 Bản gốc (Trích đoạn):**\n> ${snippet.replace(/\n/g, '\n> ')}\n\n**🌐 Bản dịch:**\n${translatedResult}`;
+        if (description.length > 4096) {
+            description = description.substring(0, 4093) + '...';
+        }
+
         const embed = new EmbedBuilder()
             .setColor('#10b981') // Green success color
             .setTitle(interaction.commandName)
-            .addFields(
-                { name: '📝 Bản gốc (Trích đoạn)', value: `> ${snippet.replace(/\n/g, '\n> ')}` },
-                { name: '🌐 Bản dịch', value: translatedResult }
-            );
+            .setDescription(description);
             
         await interaction.editReply({ content: '', embeds: [embed] });
     } catch (error) {
