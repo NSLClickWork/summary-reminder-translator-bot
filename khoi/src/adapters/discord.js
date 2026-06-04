@@ -1,4 +1,4 @@
-const { REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GatewayIntentBits, Partials, ApplicationCommandType } = require('discord.js');
+const { REST, Routes, ActionRowBuilder, ButtonBuilder, ButtonStyle, EmbedBuilder, GatewayIntentBits, Partials, ApplicationCommandType, ChannelSelectMenuBuilder, ChannelType } = require('discord.js');
 const schedule = require('node-schedule');
 
 // Import logic from modules (will be refactored to support Discord instead of Slack)
@@ -77,15 +77,42 @@ function init(summaryBot, reminderBot) {
     });
 
     summaryBot.on('interactionCreate', async interaction => {
-        if (interaction.isMessageContextMenuCommand()) {
-            await translator.handleContextMenu(interaction);
-            return;
+        if (interaction.isButton()) {
+            if (interaction.customId === 'btn_summary_all') {
+                await interaction.deferReply({ ephemeral: true });
+                const member = interaction.member;
+                const hasPerm = member.roles.cache.some(role => ['CEO', 'CEO Assistant', 'Admin', 'Manager'].includes(role.name));
+                if (!hasPerm) {
+                    return await interaction.editReply('🚫 **Access Denied:** You do not have permission to run the global summary.');
+                }
+                await interaction.editReply('🚀 Triggering global Morning Brief for all active channels...');
+                try {
+                    await morningBrief.runMorningBriefCron(summaryBot);
+                    await interaction.editReply('✅ Global Morning Brief completed!');
+                } catch (error) {
+                    console.error(error);
+                    await interaction.editReply('❌ An error occurred while generating the global summary.');
+                }
+                return;
+            }
+            if (interaction.customId === 'btn_translation_guide') {
+                await interaction.reply({
+                    ephemeral: true,
+                    content: "**📖 Translation Guide / Hướng dẫn Dịch:**\n\n" +
+                             "**[EN]** To translate any message, simply Right-Click on the message (or Long Press on mobile) -> select **Apps** -> choose **Translate to 🇻🇳 / 🇺🇸 / 🇩🇪**. The translation will be sent to you privately!\n\n" +
+                             "**[VN]** Để dịch bất kỳ tin nhắn nào, bạn chỉ cần Click Chuột Phải vào tin nhắn đó (hoặc Đè dính trên điện thoại) -> chọn **Ứng dụng (Apps)** -> chọn **Translate to 🇻🇳 / 🇺🇸 / 🇩🇪**. Bản dịch sẽ được gửi riêng cho bạn không ai thấy!"
+                });
+                return;
+            }
         }
 
-        if (interaction.isButton() && interaction.customId === 'btn_run_summary') {
+        if (interaction.isChannelSelectMenu() && interaction.customId === 'select_summary_channel') {
             await interaction.deferReply({ ephemeral: true });
+            const channelId = interaction.values[0];
+            const targetChannel = await summaryBot.channels.fetch(channelId);
+            
             try {
-                await morningBrief.runMorningBrief(interaction);
+                await morningBrief.runMorningBrief(interaction, targetChannel);
             } catch (error) {
                 console.error(error);
                 await interaction.editReply('❌ An error occurred while generating the summary.');
@@ -98,18 +125,34 @@ function init(summaryBot, reminderBot) {
         if (interaction.commandName === 'setup_summary_dashboard') {
             const embed = new EmbedBuilder()
                 .setTitle('🌅 SUMMARY BOT: Daily Recap Dashboard')
-                .setDescription('Click the button below to generate an immediate AI summary of the recent activities in this channel. No commands needed!')
+                .setDescription(
+                    '**Welcome to the Summary Dashboard!**\n\n' +
+                    '⚠️ **Warning:** The "Summary All Channels" button will scan ALL active channels and post a summary directly into each channel. / **Cảnh báo:** Nút "Summary All" sẽ quét TOÀN BỘ kênh và gửi thẳng báo cáo vào từng kênh.\n\n' +
+                    'Please use the dropdown menu below to summarize a specific channel instead!'
+                )
                 .setColor('#10b981');
 
-            const row = new ActionRowBuilder()
+            const row1 = new ActionRowBuilder()
                 .addComponents(
                     new ButtonBuilder()
-                        .setCustomId('btn_run_summary')
-                        .setLabel('📊 Run Summary Now')
-                        .setStyle(ButtonStyle.Primary)
+                        .setCustomId('btn_summary_all')
+                        .setLabel('🌐 Summary All Channels')
+                        .setStyle(ButtonStyle.Danger),
+                    new ButtonBuilder()
+                        .setCustomId('btn_translation_guide')
+                        .setLabel('📖 Translation Guide')
+                        .setStyle(ButtonStyle.Secondary)
                 );
 
-            await interaction.reply({ embeds: [embed], components: [row] });
+            const row2 = new ActionRowBuilder()
+                .addComponents(
+                    new ChannelSelectMenuBuilder()
+                        .setCustomId('select_summary_channel')
+                        .setPlaceholder('Select a specific channel to summarize...')
+                        .addChannelTypes(ChannelType.GuildText)
+                );
+
+            await interaction.reply({ embeds: [embed], components: [row1, row2] });
             return;
         }
 

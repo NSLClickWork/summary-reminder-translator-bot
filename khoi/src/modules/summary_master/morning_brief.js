@@ -90,8 +90,8 @@ Format your response exactly like this:
 /**
  * Fetches yesterday's (or recent) data and generates a summary report for Discord
  */
-async function runMorningBrief(interaction) {
-    const channel = interaction.channel;
+async function runMorningBrief(interaction, targetChannel = null) {
+    const channel = targetChannel || interaction.channel;
     
     // In Discord, fetching by date requires snowflake math, or we just fetch the last 100 messages for the demo.
     // Let's fetch the last 100 messages to quickly summarize the channel.
