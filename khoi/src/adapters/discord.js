@@ -15,6 +15,10 @@ const summaryCommands = [
         description: 'Get an immediate summary of yesterday\'s activities',
     },
     {
+        name: 'setup_summary_dashboard',
+        description: 'Deploy the Pinned Dashboard for the Summary Bot (Admin only)'
+    },
+    {
         name: 'trigger_morning_brief',
         description: 'Admin only: Manually trigger the morning brief cron job for all active channels'
     },
@@ -78,7 +82,36 @@ function init(summaryBot, reminderBot) {
             return;
         }
 
+        if (interaction.isButton() && interaction.customId === 'btn_run_summary') {
+            await interaction.deferReply({ ephemeral: true });
+            try {
+                await morningBrief.runMorningBrief(interaction);
+            } catch (error) {
+                console.error(error);
+                await interaction.editReply('❌ An error occurred while generating the summary.');
+            }
+            return;
+        }
+
         if (!interaction.isChatInputCommand()) return;
+
+        if (interaction.commandName === 'setup_summary_dashboard') {
+            const embed = new EmbedBuilder()
+                .setTitle('🌅 SUMMARY BOT: Daily Recap Dashboard')
+                .setDescription('Click the button below to generate an immediate AI summary of the recent activities in this channel. No commands needed!')
+                .setColor('#10b981');
+
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new ButtonBuilder()
+                        .setCustomId('btn_run_summary')
+                        .setLabel('📊 Run Summary Now')
+                        .setStyle(ButtonStyle.Primary)
+                );
+
+            await interaction.reply({ embeds: [embed], components: [row] });
+            return;
+        }
 
         if (interaction.commandName === 'summary') {
             await interaction.deferReply({ ephemeral: true });
