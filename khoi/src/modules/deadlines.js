@@ -90,9 +90,9 @@ async function handleInteraction(interaction) {
     if (interaction.isButton() && interaction.customId === 'btn_assign_task') {
         const member = interaction.member;
         
-        // Check if user has permission (CEO, CEO Assistant, Admin, or IT for testing)
+        // Check if user has permission (CEO, CEO Assistant, Manager)
         const hasPermission = member.roles.cache.some(role => 
-            ['CEO', 'CEO Assistant', 'Admin', 'IT'].includes(role.name)
+            ['CEO', 'CEO Assistant', 'Manager'].includes(role.name)
         );
 
         if (!hasPermission) {
