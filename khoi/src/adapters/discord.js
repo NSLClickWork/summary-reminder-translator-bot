@@ -77,6 +77,11 @@ function init(summaryBot, reminderBot) {
     });
 
     summaryBot.on('interactionCreate', async interaction => {
+        if (interaction.isMessageContextMenuCommand()) {
+            await translator.handleContextMenu(interaction);
+            return;
+        }
+
         if (interaction.isButton()) {
             if (interaction.customId === 'btn_summary_all') {
                 await interaction.deferReply({ ephemeral: true });
