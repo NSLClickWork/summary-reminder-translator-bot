@@ -23,15 +23,15 @@ const summaryCommands = [
         description: 'Admin only: Manually trigger the morning brief cron job for all active channels'
     },
     {
-        name: 'Translate to 🇻🇳',
+        name: 'Translate to VN',
         type: ApplicationCommandType.Message,
     },
     {
-        name: 'Translate to 🇺🇸',
+        name: 'Translate to EN',
         type: ApplicationCommandType.Message,
     },
     {
-        name: 'Translate to 🇩🇪',
+        name: 'Translate to DE',
         type: ApplicationCommandType.Message,
     }
 ];

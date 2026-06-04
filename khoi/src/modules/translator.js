@@ -52,9 +52,10 @@ async function handleReactionAdd(reaction, user) {
 
 async function handleContextMenu(interaction) {
     let targetLang = '';
-    if (interaction.commandName === 'Translate to 🇻🇳') targetLang = 'Vietnamese';
-    else if (interaction.commandName === 'Translate to 🇺🇸') targetLang = 'English';
-    else if (interaction.commandName === 'Translate to 🇩🇪') targetLang = 'German';
+    const cmdName = interaction.commandName;
+    if (cmdName.includes('VN') || cmdName.includes('🇻🇳')) targetLang = 'Vietnamese';
+    else if (cmdName.includes('EN') || cmdName.includes('🇺🇸') || cmdName.includes('US')) targetLang = 'English';
+    else if (cmdName.includes('DE') || cmdName.includes('🇩🇪')) targetLang = 'German';
     else return;
 
     await interaction.deferReply({ ephemeral: true });
