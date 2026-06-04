@@ -130,7 +130,8 @@ function init(summaryBot, reminderBot) {
                     '⚠️ **Warning:** The "Summary All Channels" button will scan ALL active channels and post a summary directly into each channel. / **Cảnh báo:** Nút "Summary All" sẽ quét TOÀN BỘ kênh và gửi thẳng báo cáo vào từng kênh.\n\n' +
                     '👇 **Tip:** Use the dropdown menu below to summarize a specific channel. **You can type the channel name to search! (Gõ tên kênh để tìm nhanh)**'
                 )
-                .setColor('#10b981');
+                .setColor('#10b981')
+                .setFooter({ text: 'NSL Bot System • Designed by Khoi Nguyen (Tom)' });
 
             const row1 = new ActionRowBuilder()
                 .addComponents(
@@ -216,7 +217,8 @@ function init(summaryBot, reminderBot) {
                 const embed = new EmbedBuilder()
                     .setTitle('🗂️ OPS Team: Daily Workflow Dashboard')
                     .setDescription('Click the buttons below to interact with your daily tasks. No commands needed!')
-                    .setColor('#0099ff');
+                    .setColor('#0099ff')
+                    .setFooter({ text: 'NSL Bot System • Designed by Khoi Nguyen (Tom)' });
 
                 const row = new ActionRowBuilder()
                     .addComponents(
