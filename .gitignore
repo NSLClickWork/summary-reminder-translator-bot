@@ -23,4 +23,5 @@ src/data/summary_state.json
 
 # Local documents and scripts
 *.docx
+*.xlsx
 *.bat
