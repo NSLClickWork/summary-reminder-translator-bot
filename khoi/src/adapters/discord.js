@@ -81,9 +81,9 @@ function init(summaryBot, reminderBot) {
             if (interaction.customId === 'btn_summary_all') {
                 await interaction.deferReply({ ephemeral: true });
                 const member = interaction.member;
-                const hasPerm = member.roles.cache.some(role => ['CEO', 'CEO Assistant', 'Admin', 'Manager'].includes(role.name));
+                const hasPerm = member.roles.cache.some(role => ['CEO'].includes(role.name));
                 if (!hasPerm) {
-                    return await interaction.editReply('🚫 **Access Denied:** You do not have permission to run the global summary.');
+                    return await interaction.editReply('🚫 **Access Denied:** Only the Management Team (CEO) can run the global summary.');
                 }
                 await interaction.editReply('🚀 Triggering global Morning Brief for all active channels...');
                 try {
