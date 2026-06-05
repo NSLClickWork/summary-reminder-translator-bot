@@ -133,10 +133,8 @@ async function handleInteraction(interaction) {
             
             let files = [];
             const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
-            if (notesText.length > 1000) {
-                const truncatedNotes = notesText.substring(0, 1000) + '...\n\n👉 **(Xem file đính kèm bên dưới để đọc toàn văn)**';
-                embed.addFields({ name: 'Notes', value: truncatedNotes });
-                
+            if (notesText.length > 1024) {
+                embed.addFields({ name: 'Notes', value: notesText.substring(0, 1020) + '...' });
                 const buffer = Buffer.from(notesText, 'utf-8');
                 const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
                 files.push(attachment);
@@ -362,10 +360,8 @@ async function handleInteraction(interaction) {
                     );
                 let files = [];
                 if (notes) {
-                    if (notes.length > 1000) {
-                        const truncatedNotes = notes.substring(0, 1000) + '...\n\n👉 **(Xem file đính kèm bên dưới để đọc toàn văn)**';
-                        embed.addFields({ name: 'Notes', value: truncatedNotes });
-                        
+                    if (notes.length > 1024) {
+                        embed.addFields({ name: 'Notes', value: notes.substring(0, 1020) + '...' });
                         const buffer = Buffer.from(notes, 'utf-8');
                         const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
                         files.push(attachment);
