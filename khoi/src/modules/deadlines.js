@@ -348,15 +348,22 @@ async function handleInteraction(interaction) {
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
                     );
-                if (notes) {
-                    embed.addFields({ name: 'Notes', value: notes.substring(0, 1024) });
-                }
-                    
-                const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
+                
                 const payload = { 
                     content: `🔔 <@${assigneeId}>, you have a new task!`,
                     embeds: [embed] 
                 };
+                
+                if (notes) {
+                    // Show first 1024 chars in embed
+                    embed.addFields({ name: 'Notes', value: notes.substring(0, 1024) });
+                    // Always attach full notes as .txt file so assignee can download & read
+                    const buffer = Buffer.from(`Task: ${taskName}\nDeadline: ${parsedDeadline}\n\nNotes:\n${notes}`, 'utf-8');
+                    const attachment = new AttachmentBuilder(buffer, { name: 'Task_Notes.txt' });
+                    payload.files = [attachment];
+                }
+                    
+                const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
 
                 if (assignChannelId) {
                     const assignChannel = await interaction.client.channels.fetch(assignChannelId);
