@@ -81,12 +81,65 @@ async function handleInteraction(interaction) {
                         value: `**Deadline:** ${deadline}\n**Status:** ${status}${notes ? `\n**Notes:** ${notes}` : ''}`
                     });
                 });
-            }
 
-            await interaction.reply({ embeds: [embed], ephemeral: true });
+                const options = records.map((record, index) => {
+                    const taskName = record.get('Task_Name');
+                    return {
+                        label: `${index + 1}. ${taskName.substring(0, 50)}`,
+                        description: 'Click to view full details/notes',
+                        value: record.getId()
+                    };
+                });
+                
+                const row = new ActionRowBuilder().addComponents(
+                    new StringSelectMenuBuilder()
+                        .setCustomId('select_view_task_details')
+                        .setPlaceholder('View full task details & notes...')
+                        .addOptions(options)
+                );
+
+                await interaction.reply({ embeds: [embed], components: [row], ephemeral: true });
+            }
         } catch (error) {
             console.error('Error fetching tasks:', error);
             await interaction.reply({ content: '⚠️ **Database not ready**\nThe `Tasks` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Assignee_Slack_ID`, `Deadline`, `Status`.', ephemeral: true });
+        }
+    }
+
+    if (interaction.isStringSelectMenu() && interaction.customId === 'select_view_task_details') {
+        const recordId = interaction.values[0];
+        try {
+            const record = await base('Tasks').find(recordId);
+            const taskName = record.get('Task_Name');
+            const deadline = record.get('Deadline') || 'No deadline';
+            const notes = record.get('Notes') || 'No additional notes.';
+            
+            const embed = new EmbedBuilder()
+                .setColor('#0099ff')
+                .setTitle(`📋 Task Details: ${taskName}`)
+                .addFields({ name: 'Deadline', value: deadline });
+            
+            let files = [];
+            if (notes.length > 1000) {
+                const truncatedNotes = notes.substring(0, 1000) + '...\n\n👉 **(Xem file đính kèm bên dưới để đọc toàn văn)**';
+                embed.addFields({ name: 'Notes', value: truncatedNotes });
+                
+                const buffer = Buffer.from(notes, 'utf-8');
+                const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
+                files.push(attachment);
+            } else {
+                embed.addFields({ name: 'Notes', value: notes });
+            }
+            
+            const payload = { embeds: [embed], ephemeral: true };
+            if (files.length > 0) {
+                payload.files = files;
+            }
+            
+            await interaction.reply(payload);
+        } catch (error) {
+            console.error('Error fetching task details:', error);
+            await interaction.reply({ content: '❌ Failed to fetch task details.', ephemeral: true });
         }
     }
     
