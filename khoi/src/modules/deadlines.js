@@ -71,10 +71,14 @@ async function handleInteraction(interaction) {
                     const taskName = record.get('Task_Name');
                     const deadline = record.get('Deadline') || 'No deadline';
                     const status = record.get('Status') || 'To Do';
+                    let notes = record.get('Notes') || '';
+                    if (notes) {
+                        notes = notes.length > 200 ? notes.substring(0, 200) + '...' : notes;
+                    }
 
                     embed.addFields({
                         name: `${index + 1}. ${taskName}`,
-                        value: `**Deadline:** ${deadline}\n**Status:** ${status}`
+                        value: `**Deadline:** ${deadline}\n**Status:** ${status}${notes ? `\n**Notes:** ${notes}` : ''}`
                     });
                 });
             }
