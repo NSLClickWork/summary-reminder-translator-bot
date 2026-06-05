@@ -289,6 +289,9 @@ async function handleInteraction(interaction) {
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
                     );
+                if (notes) {
+                    embed.addFields({ name: 'Notes', value: notes });
+                }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
                 if (assignChannelId) {
