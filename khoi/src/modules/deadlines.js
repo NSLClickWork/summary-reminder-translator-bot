@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const Airtable = require('airtable');
-const { EmbedBuilder, ActionRowBuilder, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder, AttachmentBuilder } = require('discord.js');
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
@@ -218,7 +218,7 @@ async function handleInteraction(interaction) {
             .setCustomId('notes')
             .setLabel("Details / Notes (Optional)")
             .setStyle(TextInputStyle.Paragraph)
-            .setMaxLength(1000)
+            .setMaxLength(4000)
             .setRequired(false);
 
         const row1 = new ActionRowBuilder().addComponents(taskNameInput);
@@ -290,9 +290,18 @@ async function handleInteraction(interaction) {
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
                     );
+                let files = [];
                 if (notes) {
-                    const truncatedNotes = notes.length > 1000 ? notes.substring(0, 1000) + '... (Xem thêm trên Airtable)' : notes;
-                    embed.addFields({ name: 'Notes', value: truncatedNotes });
+                    if (notes.length > 1000) {
+                        const truncatedNotes = notes.substring(0, 1000) + '...\n\n👉 **(Xem file đính kèm bên dưới để đọc toàn văn)**';
+                        embed.addFields({ name: 'Notes', value: truncatedNotes });
+                        
+                        const buffer = Buffer.from(notes, 'utf-8');
+                        const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
+                        files.push(attachment);
+                    } else {
+                        embed.addFields({ name: 'Notes', value: notes });
+                    }
                 }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
@@ -301,18 +310,21 @@ async function handleInteraction(interaction) {
                     if (assignChannel) {
                         await assignChannel.send({ 
                             content: `🔔 <@${assigneeId}>, you have a new task!`,
-                            embeds: [embed] 
+                            embeds: [embed],
+                            files: files
                         });
                     } else {
                         await interaction.channel.send({ 
                             content: `🔔 <@${assigneeId}>, you have a new task!`,
-                            embeds: [embed] 
+                            embeds: [embed],
+                            files: files
                         });
                     }
                 } else {
                     await interaction.channel.send({ 
                         content: `🔔 <@${assigneeId}>, you have a new task!`,
-                        embeds: [embed] 
+                        embeds: [embed],
+                        files: files
                     });
                 }
             } catch (err) {
