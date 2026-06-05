@@ -212,10 +212,26 @@ async function handleInteraction(interaction) {
                         { name: 'Deadline', value: parsedDeadline }
                     );
                     
-                await interaction.channel.send({ 
-                    content: `🔔 <@${assigneeId}>, you have a new task!`,
-                    embeds: [embed] 
-                });
+                const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
+                if (assignChannelId) {
+                    const assignChannel = await interaction.client.channels.fetch(assignChannelId);
+                    if (assignChannel) {
+                        await assignChannel.send({ 
+                            content: `🔔 <@${assigneeId}>, you have a new task!`,
+                            embeds: [embed] 
+                        });
+                    } else {
+                        await interaction.channel.send({ 
+                            content: `🔔 <@${assigneeId}>, you have a new task!`,
+                            embeds: [embed] 
+                        });
+                    }
+                } else {
+                    await interaction.channel.send({ 
+                        content: `🔔 <@${assigneeId}>, you have a new task!`,
+                        embeds: [embed] 
+                    });
+                }
             } catch (err) {
                 console.error('Could not send notification to channel:', err);
             }
