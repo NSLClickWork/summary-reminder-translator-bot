@@ -30,6 +30,8 @@ async function runMorningBriefCron(client) {
         'welcome', 'roles-selection', 'daily-summary', 'bot', 'shift-report', 
         'assign-task', 'attendance-shift-report', '-test-bot-just_for_it', 
         '-bot-dev-just_for_it', 'support', 'media-assets', 'kaffee-media-assets',
+        'bot-support', 'bot-logs-reporting', 'website-dev', 'ai-lab',
+        'automation-alerts', 'partnerships', 'projects', 'ideas-lab',
         ...envBlacklist
     ];
 
