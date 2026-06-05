@@ -201,9 +201,8 @@ async function handleInteraction(interaction) {
                 ephemeral: true
             });
             
-            // Optionally try to notify the assignee
+            // Send a public notification in the channel where the command was run
             try {
-                const user = await interaction.client.users.fetch(assigneeId);
                 const embed = new EmbedBuilder()
                     .setColor('#0099ff')
                     .setTitle('📋 New Task Assigned')
@@ -212,9 +211,13 @@ async function handleInteraction(interaction) {
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
                     );
-                await user.send({ embeds: [embed] });
+                    
+                await interaction.channel.send({ 
+                    content: `🔔 <@${assigneeId}>, you have a new task!`,
+                    embeds: [embed] 
+                });
             } catch (err) {
-                console.error('Could not notify user:', err);
+                console.error('Could not send notification to channel:', err);
             }
         } catch (error) {
             console.error('Error creating task:', error);
