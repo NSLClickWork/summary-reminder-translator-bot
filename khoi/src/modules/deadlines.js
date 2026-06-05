@@ -109,7 +109,16 @@ async function handleInteraction(interaction) {
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_view_task_details') {
         const recordId = interaction.values[0];
         try {
-            const record = await base('Tasks').find(recordId);
+            const records = await base('Tasks').select({
+                filterByFormula: `RECORD_ID() = '${recordId}'`,
+                maxRecords: 1
+            }).firstPage();
+            
+            if (!records || records.length === 0) {
+                return await interaction.reply({ content: '❌ Task not found.', ephemeral: true });
+            }
+            
+            const record = records[0];
             const taskName = record.get('Task_Name');
             const deadline = record.get('Deadline') || 'No deadline';
             const notes = record.get('Notes') || 'No additional notes.';
