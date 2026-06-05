@@ -218,6 +218,7 @@ async function handleInteraction(interaction) {
             .setCustomId('notes')
             .setLabel("Details / Notes (Optional)")
             .setStyle(TextInputStyle.Paragraph)
+            .setMaxLength(1000)
             .setRequired(false);
 
         const row1 = new ActionRowBuilder().addComponents(taskNameInput);
