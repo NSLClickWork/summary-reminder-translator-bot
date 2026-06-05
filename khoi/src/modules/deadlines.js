@@ -329,6 +329,7 @@ async function handleInteraction(interaction) {
                 }
             } catch (err) {
                 console.error('Error sending notification:', err);
+                await interaction.followUp({ content: `❌ **Cảnh báo từ Dev:** Không thể gửi thông báo ra kênh (Có thể do thiếu quyền Attach Files). Lỗi: \`${err.message}\``, ephemeral: true });
             }
         } catch (error) {
             console.error('Error creating task:', error);
