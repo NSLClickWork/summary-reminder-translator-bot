@@ -228,10 +228,6 @@ function init(summaryBot, reminderBot) {
                 const row = new ActionRowBuilder()
                     .addComponents(
                         new ButtonBuilder()
-                            .setCustomId('btn_check_approvals')
-                            .setLabel('📋 Review Approvals')
-                            .setStyle(ButtonStyle.Primary),
-                        new ButtonBuilder()
                             .setCustomId('btn_check_deadlines')
                             .setLabel('⏰ Check Deadlines')
                             .setStyle(ButtonStyle.Danger),
