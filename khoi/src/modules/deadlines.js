@@ -339,11 +339,10 @@ async function handleInteraction(interaction) {
             
             // Build and send public notification embed
             try {
-                const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
                 const embed = new EmbedBuilder()
                     .setColor('#0099ff')
                     .setTitle('📋 New Task Assigned')
-                    .setDescription(`You have been assigned a new task by <@${interaction.user.id}>.\n\n**Notes:**\n${notesText}`)
+                    .setDescription(`You have been assigned a new task by <@${interaction.user.id}>.`)
                     .addFields(
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
@@ -353,6 +352,13 @@ async function handleInteraction(interaction) {
                     content: `🔔 <@${assigneeId}>, you have a new task!`,
                     embeds: [embed] 
                 };
+
+                if (notes && notes.length > 0) {
+                    embed.addFields({ name: 'Notes', value: '📄 See attached `Task_Notes.txt` file for full details.' });
+                    const buffer = Buffer.from(`Task: ${taskName}\nDeadline: ${parsedDeadline}\n\nNotes:\n${notes}`, 'utf-8');
+                    const attachment = new AttachmentBuilder(buffer, { name: 'Task_Notes.txt' });
+                    payload.files = [attachment];
+                }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
 
