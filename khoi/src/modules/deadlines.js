@@ -194,7 +194,7 @@ async function handleInteraction(interaction) {
                 fieldsToSave["Notes"] = notes;
             }
             
-            await base('Tasks').create([{ "fields": fieldsToSave }]);
+            await base('Tasks').create([{ "fields": fieldsToSave }], { typecast: true });
             
             await interaction.reply({
                 content: `✅ Successfully assigned **${taskName}** to <@${assigneeId}> with deadline **${parsedDeadline}**!`,
