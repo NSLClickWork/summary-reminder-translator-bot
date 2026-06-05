@@ -139,7 +139,7 @@ async function handleInteraction(interaction) {
             await interaction.reply(payload);
         } catch (error) {
             console.error('Error fetching task details:', error);
-            await interaction.reply({ content: '❌ Failed to fetch task details.', ephemeral: true });
+            await interaction.reply({ content: `❌ Failed to fetch task details. Error: ${error.message}`, ephemeral: true });
         }
     }
     
