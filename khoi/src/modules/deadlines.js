@@ -1,6 +1,6 @@
 const schedule = require('node-schedule');
 const Airtable = require('airtable');
-const { EmbedBuilder, ActionRowBuilder, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle } = require('discord.js');
+const { EmbedBuilder, ActionRowBuilder, UserSelectMenuBuilder, ModalBuilder, TextInputBuilder, TextInputStyle, StringSelectMenuBuilder } = require('discord.js');
 
 const base = new Airtable({ apiKey: process.env.AIRTABLE_API_KEY }).base(process.env.AIRTABLE_BASE_ID);
 
@@ -83,6 +83,84 @@ async function handleInteraction(interaction) {
         } catch (error) {
             console.error('Error fetching tasks:', error);
             await interaction.reply({ content: '⚠️ **Database not ready**\nThe `Tasks` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Assignee_Slack_ID`, `Deadline`, `Status`.', ephemeral: true });
+        }
+    }
+    
+    // Step 1.5: Mark as Done Button clicked
+    if (interaction.isButton() && interaction.customId === 'btn_mark_done') {
+        const userId = interaction.user.id;
+        
+        try {
+            const records = await base('Tasks').select({
+                filterByFormula: `AND({Status} != 'Done', {Assignee_Slack_ID} = '${userId}')`,
+                sort: [{field: "Deadline", direction: "asc"}]
+            }).firstPage();
+
+            if (records.length === 0) {
+                return await interaction.reply({ content: '🎉 You have no pending tasks to mark as done!', ephemeral: true });
+            }
+
+            const options = records.slice(0, 25).map(record => {
+                const taskName = record.get('Task_Name');
+                const deadline = record.get('Deadline') || 'No deadline';
+                return {
+                    label: taskName.substring(0, 100),
+                    description: `Deadline: ${deadline}`.substring(0, 100),
+                    value: record.id
+                };
+            });
+
+            const row = new ActionRowBuilder()
+                .addComponents(
+                    new StringSelectMenuBuilder()
+                        .setCustomId('select_mark_done')
+                        .setPlaceholder('Select a task you have completed...')
+                        .addOptions(options)
+                );
+
+            await interaction.reply({
+                content: 'Please select the task you have completed:',
+                components: [row],
+                ephemeral: true
+            });
+        } catch (error) {
+            console.error('Error fetching tasks for mark done:', error);
+            await interaction.reply({ content: '⚠️ Failed to fetch your tasks from Airtable.', ephemeral: true });
+        }
+    }
+
+    // Step 1.6: Task selected to mark as done
+    if (interaction.isStringSelectMenu() && interaction.customId === 'select_mark_done') {
+        const recordId = interaction.values[0];
+        
+        try {
+            // Update Airtable
+            const updatedRecords = await base('Tasks').update([
+                {
+                    "id": recordId,
+                    "fields": {
+                        "Status": "Done"
+                    }
+                }
+            ]);
+            
+            const taskName = updatedRecords[0].get('Task_Name');
+            
+            await interaction.reply({ content: `✅ Successfully marked **${taskName}** as Done!`, ephemeral: true });
+            
+            // Notify Boss in assign channel
+            const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
+            if (assignChannelId) {
+                const assignChannel = await interaction.client.channels.fetch(assignChannelId);
+                if (assignChannel) {
+                    await assignChannel.send({ 
+                        content: `🎉 <@${interaction.user.id}> has completed the task: **${taskName}**!`
+                    });
+                }
+            }
+        } catch (error) {
+            console.error('Error updating task status:', error);
+            await interaction.reply({ content: '❌ Failed to update the task status in Airtable.', ephemeral: true });
         }
     }
     

@@ -236,9 +236,13 @@ function init(summaryBot, reminderBot) {
                             .setLabel('✍️ Assign Task')
                             .setStyle(ButtonStyle.Secondary),
                         new ButtonBuilder()
+                            .setCustomId('btn_mark_done')
+                            .setLabel('✅ Mark as Done')
+                            .setStyle(ButtonStyle.Success),
+                        new ButtonBuilder()
                             .setCustomId('btn_trigger_sync')
                             .setLabel('🔄 Trigger Sync')
-                            .setStyle(ButtonStyle.Success)
+                            .setStyle(ButtonStyle.Secondary)
                     );
 
                 await interaction.reply({ embeds: [embed], components: [row] });
