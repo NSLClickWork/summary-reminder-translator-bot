@@ -126,15 +126,19 @@ async function handleInteraction(interaction) {
             
             const { taskName, deadline, notes } = cached;
             
-            const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
-            
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
                 .setTitle(`📋 Task Details: ${taskName}`)
-                .setDescription(`**Notes:**\n${notesText}`)
                 .addFields({ name: 'Deadline', value: deadline });
             
             const payload = { embeds: [embed], ephemeral: true };
+
+            if (notes && notes.length > 0) {
+                embed.addFields({ name: 'Notes', value: '📄 See attached `Task_Notes.txt` file for full details.' });
+                const buffer = Buffer.from(`Task: ${taskName}\nDeadline: ${deadline}\n\nNotes:\n${notes}`, 'utf-8');
+                const attachment = new AttachmentBuilder(buffer, { name: 'Task_Notes.txt' });
+                payload.files = [attachment];
+            }
             
             await interaction.reply(payload);
         } catch (error) {
