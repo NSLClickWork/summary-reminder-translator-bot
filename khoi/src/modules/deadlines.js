@@ -126,14 +126,13 @@ async function handleInteraction(interaction) {
             
             const { taskName, deadline, notes } = cached;
             
+            const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
+            
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
                 .setTitle(`📋 Task Details: ${taskName}`)
+                .setDescription(`**Notes:**\n${notesText}`)
                 .addFields({ name: 'Deadline', value: deadline });
-            
-            let files = [];
-            const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
-            embed.addFields({ name: 'Notes', value: notesText.substring(0, 1024) });
             
             const payload = { embeds: [embed], ephemeral: true };
             
@@ -274,9 +273,9 @@ async function handleInteraction(interaction) {
             
         const notesInput = new TextInputBuilder()
             .setCustomId('notes')
-            .setLabel("Details / Notes (Max 1000 chars, Optional)")
+            .setLabel("Details / Notes (Optional)")
             .setStyle(TextInputStyle.Paragraph)
-            .setMaxLength(1000)
+            .setMaxLength(4000)
             .setRequired(false);
 
         const row1 = new ActionRowBuilder().addComponents(taskNameInput);
@@ -340,28 +339,20 @@ async function handleInteraction(interaction) {
             
             // Build and send public notification embed
             try {
+                const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
                 const embed = new EmbedBuilder()
                     .setColor('#0099ff')
                     .setTitle('📋 New Task Assigned')
-                    .setDescription(`You have been assigned a new task by <@${interaction.user.id}>.`)
+                    .setDescription(`You have been assigned a new task by <@${interaction.user.id}>.\n\n**Notes:**\n${notesText}`)
                     .addFields(
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
                     );
-                
+                    
                 const payload = { 
                     content: `🔔 <@${assigneeId}>, you have a new task!`,
                     embeds: [embed] 
                 };
-                
-                if (notes) {
-                    // Show first 1024 chars in embed
-                    embed.addFields({ name: 'Notes', value: notes.substring(0, 1024) });
-                    // Always attach full notes as .txt file so assignee can download & read
-                    const buffer = Buffer.from(`Task: ${taskName}\nDeadline: ${parsedDeadline}\n\nNotes:\n${notes}`, 'utf-8');
-                    const attachment = new AttachmentBuilder(buffer, { name: 'Task_Notes.txt' });
-                    payload.files = [attachment];
-                }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
 
