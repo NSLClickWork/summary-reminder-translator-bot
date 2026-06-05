@@ -132,15 +132,16 @@ async function handleInteraction(interaction) {
                 .addFields({ name: 'Deadline', value: deadline });
             
             let files = [];
-            if (notes.length > 1000) {
-                const truncatedNotes = notes.substring(0, 1000) + '...\n\n👉 **(Xem file đính kèm bên dưới để đọc toàn văn)**';
+            const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
+            if (notesText.length > 1000) {
+                const truncatedNotes = notesText.substring(0, 1000) + '...\n\n👉 **(Xem file đính kèm bên dưới để đọc toàn văn)**';
                 embed.addFields({ name: 'Notes', value: truncatedNotes });
                 
-                const buffer = Buffer.from(notes, 'utf-8');
+                const buffer = Buffer.from(notesText, 'utf-8');
                 const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
                 files.push(attachment);
             } else {
-                embed.addFields({ name: 'Notes', value: notes });
+                embed.addFields({ name: 'Notes', value: notesText });
             }
             
             const payload = { embeds: [embed], ephemeral: true };
