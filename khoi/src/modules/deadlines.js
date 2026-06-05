@@ -338,7 +338,7 @@ async function handleInteraction(interaction) {
                 ephemeral: true
             });
             
-            // Send a public notification in the channel where the command was run
+            // Build and send public notification embed
             try {
                 const embed = new EmbedBuilder()
                     .setColor('#0099ff')
