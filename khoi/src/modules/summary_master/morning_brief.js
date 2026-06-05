@@ -25,7 +25,7 @@ async function runMorningBriefCron(client) {
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
     // List of channels to explicitly ignore
-    const excludeChannels = ['welcome', 'roles-selection', 'daily-summary', 'bot', 'shift-report'];
+    const excludeChannels = ['welcome', 'roles-selection', 'daily-summary', 'bot', 'shift-report', 'assign-task', 'attendance-shift-report', '-test-bot-just_for_it', '-bot-dev-just_for_it', 'support'];
 
     // Get all text channels
     const allChannels = client.channels.cache.filter(c => c.isTextBased() && !excludeChannels.includes(c.name));
