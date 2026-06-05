@@ -133,19 +133,9 @@ async function handleInteraction(interaction) {
             
             let files = [];
             const notesText = notes && notes.length > 0 ? notes : 'No additional notes.';
-            if (notesText.length > 1024) {
-                embed.addFields({ name: 'Notes', value: notesText.substring(0, 1020) + '...' });
-                const buffer = Buffer.from(notesText, 'utf-8');
-                const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
-                files.push(attachment);
-            } else {
-                embed.addFields({ name: 'Notes', value: notesText });
-            }
+            embed.addFields({ name: 'Notes', value: notesText.substring(0, 1024) });
             
             const payload = { embeds: [embed], ephemeral: true };
-            if (files.length > 0) {
-                payload.files = files;
-            }
             
             await interaction.reply(payload);
         } catch (error) {
@@ -284,9 +274,9 @@ async function handleInteraction(interaction) {
             
         const notesInput = new TextInputBuilder()
             .setCustomId('notes')
-            .setLabel("Details / Notes (Optional)")
+            .setLabel("Details / Notes (Max 1000 chars, Optional)")
             .setStyle(TextInputStyle.Paragraph)
-            .setMaxLength(4000)
+            .setMaxLength(1000)
             .setRequired(false);
 
         const row1 = new ActionRowBuilder().addComponents(taskNameInput);
@@ -358,16 +348,8 @@ async function handleInteraction(interaction) {
                         { name: 'Task', value: taskName },
                         { name: 'Deadline', value: parsedDeadline }
                     );
-                let files = [];
                 if (notes) {
-                    if (notes.length > 1024) {
-                        embed.addFields({ name: 'Notes', value: notes.substring(0, 1020) + '...' });
-                        const buffer = Buffer.from(notes, 'utf-8');
-                        const attachment = new AttachmentBuilder(buffer, { name: 'Task_Details.txt' });
-                        files.push(attachment);
-                    } else {
-                        embed.addFields({ name: 'Notes', value: notes });
-                    }
+                    embed.addFields({ name: 'Notes', value: notes.substring(0, 1024) });
                 }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
@@ -375,9 +357,6 @@ async function handleInteraction(interaction) {
                     content: `🔔 <@${assigneeId}>, you have a new task!`,
                     embeds: [embed] 
                 };
-                if (files.length > 0) {
-                    payload.files = files;
-                }
 
                 if (assignChannelId) {
                     const assignChannel = await interaction.client.channels.fetch(assignChannelId);
@@ -391,7 +370,6 @@ async function handleInteraction(interaction) {
                 }
             } catch (err) {
                 console.error('Error sending notification:', err);
-                await interaction.followUp({ content: `❌ **Cảnh báo từ Dev:** Không thể gửi thông báo ra kênh (Có thể do thiếu quyền Attach Files). Lỗi: \`${err.message}\``, ephemeral: true });
             }
         } catch (error) {
             console.error('Error creating task:', error);
