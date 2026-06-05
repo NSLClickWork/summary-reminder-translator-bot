@@ -48,6 +48,9 @@ function register(discordApp) {
     });
 }
 
+// In-memory cache: stores task data between check and view interactions
+const taskCache = new Map();
+
 async function handleInteraction(interaction) {
     if (interaction.customId === 'btn_check_deadlines') {
         const userId = interaction.user.id;
@@ -84,10 +87,17 @@ async function handleInteraction(interaction) {
 
                 const options = records.map((record, index) => {
                     const taskName = record.get('Task_Name');
+                    const deadline = record.get('Deadline') || 'No deadline';
+                    const notes = record.get('Notes') || '';
+                    const recordId = record.getId();
+                    
+                    // Cache this task's full data for later retrieval
+                    taskCache.set(recordId, { taskName, deadline, notes });
+                    
                     return {
                         label: `${index + 1}. ${taskName.substring(0, 50)}`,
                         description: 'Click to view full details/notes',
-                        value: record.getId()
+                        value: recordId
                     };
                 });
                 
@@ -109,19 +119,12 @@ async function handleInteraction(interaction) {
     if (interaction.isStringSelectMenu() && interaction.customId === 'select_view_task_details') {
         const recordId = interaction.values[0];
         try {
-            const records = await base('Tasks').select({
-                filterByFormula: `RECORD_ID() = '${recordId}'`,
-                maxRecords: 1
-            }).firstPage();
-            
-            if (!records || records.length === 0) {
-                return await interaction.reply({ content: '❌ Task not found.', ephemeral: true });
+            const cached = taskCache.get(recordId);
+            if (!cached) {
+                return await interaction.reply({ content: '❌ Task data expired. Please press **Check Deadlines** again to refresh.', ephemeral: true });
             }
             
-            const record = records[0];
-            const taskName = record.get('Task_Name');
-            const deadline = record.get('Deadline') || 'No deadline';
-            const notes = record.get('Notes') || 'No additional notes.';
+            const { taskName, deadline, notes } = cached;
             
             const embed = new EmbedBuilder()
                 .setColor('#0099ff')
