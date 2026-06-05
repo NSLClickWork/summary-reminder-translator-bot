@@ -257,7 +257,7 @@ function init(summaryBot, reminderBot) {
             if (btnId === 'btn_check_approvals' || btnId.startsWith('btn_review_') || btnId.startsWith('btn_approve_') || btnId.startsWith('btn_reject_')) {
                 await approvals.handleInteraction(interaction);
             } 
-            else if (btnId === 'btn_check_deadlines' || btnId === 'btn_assign_task') {
+            else if (btnId === 'btn_check_deadlines' || btnId === 'btn_assign_task' || btnId === 'btn_mark_done') {
                 await deadlines.handleInteraction(interaction);
             }
             else if (btnId === 'btn_trigger_sync') {
@@ -271,7 +271,13 @@ function init(summaryBot, reminderBot) {
                 await sync.handleInteraction(interaction);
             }
         }
-        
+        // Handle String Select Menus
+        if (interaction.isStringSelectMenu()) {
+            if (interaction.customId === 'select_mark_done') {
+                await deadlines.handleInteraction(interaction);
+            }
+        }
+
         // Handle User Select Menus
         if (interaction.isUserSelectMenu()) {
             if (interaction.customId === 'select_assignee') {
