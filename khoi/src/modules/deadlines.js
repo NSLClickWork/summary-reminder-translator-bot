@@ -290,7 +290,8 @@ async function handleInteraction(interaction) {
                         { name: 'Deadline', value: parsedDeadline }
                     );
                 if (notes) {
-                    embed.addFields({ name: 'Notes', value: notes });
+                    const truncatedNotes = notes.length > 1000 ? notes.substring(0, 1000) + '... (Xem thêm trên Airtable)' : notes;
+                    embed.addFields({ name: 'Notes', value: truncatedNotes });
                 }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
