@@ -273,7 +273,7 @@ function init(summaryBot, reminderBot) {
         }
         // Handle String Select Menus
         if (interaction.isStringSelectMenu()) {
-            if (interaction.customId === 'select_mark_done') {
+            if (interaction.customId === 'select_mark_done' || interaction.customId === 'select_view_task_details') {
                 await deadlines.handleInteraction(interaction);
             }
         }
