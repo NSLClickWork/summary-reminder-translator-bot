@@ -309,30 +309,26 @@ async function handleInteraction(interaction) {
                 }
                     
                 const assignChannelId = process.env.ASSIGN_TASK_CHANNEL_ID;
+                const payload = { 
+                    content: `🔔 <@${assigneeId}>, you have a new task!`,
+                    embeds: [embed] 
+                };
+                if (files.length > 0) {
+                    payload.files = files;
+                }
+
                 if (assignChannelId) {
                     const assignChannel = await interaction.client.channels.fetch(assignChannelId);
                     if (assignChannel) {
-                        await assignChannel.send({ 
-                            content: `🔔 <@${assigneeId}>, you have a new task!`,
-                            embeds: [embed],
-                            files: files
-                        });
+                        await assignChannel.send(payload);
                     } else {
-                        await interaction.channel.send({ 
-                            content: `🔔 <@${assigneeId}>, you have a new task!`,
-                            embeds: [embed],
-                            files: files
-                        });
+                        await interaction.channel.send(payload);
                     }
                 } else {
-                    await interaction.channel.send({ 
-                        content: `🔔 <@${assigneeId}>, you have a new task!`,
-                        embeds: [embed],
-                        files: files
-                    });
+                    await interaction.channel.send(payload);
                 }
             } catch (err) {
-                console.error('Could not send notification to channel:', err);
+                console.error('Error sending notification:', err);
             }
         } catch (error) {
             console.error('Error creating task:', error);
