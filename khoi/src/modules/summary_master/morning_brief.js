@@ -7,18 +7,18 @@ const { pushDecisionsToAirtable } = require('../../../../shared/utils/airtable')
  * @param {import('discord.js').Client} client - Discord Client
  */
 function initMorningBrief(client) {
-    console.log('⏰ Initializing Morning Brief cron job (Runs everyday at 11:00 AM VN / 06:00 AM GER / 04:00 AM UTC)...');
+    console.log('⏰ Morning Brief cron job is temporarily DISABLED as requested.');
 
     // 11:00 AM Vietnam Time (UTC+7) = 04:00 AM UTC
-    schedule.scheduleJob('0 4 * * *', async () => {
-        try {
-            console.log('🚀 Running Morning Brief task...');
-            // Fetch summary for ALL active channels and post into their respective channels
-            await runMorningBriefCron(client);
-        } catch (error) {
-            console.error('Error in Morning Brief job:', error);
-        }
-    });
+    // schedule.scheduleJob('0 4 * * *', async () => {
+    //     try {
+    //         console.log('🚀 Running Morning Brief task...');
+    //         // Fetch summary for ALL active channels and post into their respective channels
+    //         await runMorningBriefCron(client);
+    //     } catch (error) {
+    //         console.error('Error in Morning Brief job:', error);
+    //     }
+    // });
 }
 
 async function runMorningBriefCron(client) {
