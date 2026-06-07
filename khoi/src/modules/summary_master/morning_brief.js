@@ -54,9 +54,7 @@ async function runMorningBriefCron(client) {
                 // If active, combine ALL 100 messages for full context (including older ones)
                 const sortedMessages = Array.from(messages.values()).reverse();
                 for (const msg of sortedMessages) {
-                    const contentLower = msg.content.toLowerCase();
-                    const isSpam = contentLower.includes('điểm danh') || contentLower.includes('attendance') || contentLower.includes('assign task') || contentLower.includes('đã giao việc');
-                    if (!msg.author.bot && msg.content.trim() !== '' && !isSpam) {
+                    if (!msg.author.bot && msg.content.trim() !== '') {
                         combinedText += `User ${msg.author.username}: ${msg.content}\n`;
                     }
                 }
@@ -74,8 +72,7 @@ Your task is to analyze the text and output a structured report in English.
 CRITICAL INSTRUCTIONS:
 1. OVERVIEW: Write a concise summary of the main events, topics, or issues discussed.
 2. DECISIONS & ACTION ITEMS: Explicitly extract and list any final decisions made, and any action items (who needs to do what).
-3. EXCLUSIONS: Completely ignore and do not mention any messages related to "assigning tasks", "attendance", "check-in/check-out", or any automated bot logs.
-4. If the logs are just test messages, casual greetings, or excluded topics, state that there were no significant business activities.
+3. If the logs are just test messages or casual greetings, state that there were no significant business activities.
 
 --- LOGS START ---
 ${combinedText}
@@ -116,9 +113,7 @@ async function runMorningBrief(interaction, targetChannel = null) {
             // Discord messages are fetched newest first. Reverse them for chronological order.
             const sortedMessages = Array.from(messages.values()).reverse();
             for (const msg of sortedMessages) {
-                const contentLower = msg.content.toLowerCase();
-                const isSpam = contentLower.includes('điểm danh') || contentLower.includes('attendance') || contentLower.includes('assign task') || contentLower.includes('đã giao việc');
-                if (!msg.author.bot && !isSpam) { // ignore bot messages and spam
+                if (!msg.author.bot) { // ignore bot messages
                     combinedText += `User ${msg.author.username}: ${msg.content}\n`;
                 }
             }
@@ -139,8 +134,7 @@ Your task is to analyze the text and output a structured report in English.
 CRITICAL INSTRUCTIONS:
 1. OVERVIEW: Write a concise summary of the main events, topics, or issues discussed.
 2. DECISIONS & ACTION ITEMS: Explicitly extract and list any final decisions made, and any action items (who needs to do what).
-3. EXCLUSIONS: Completely ignore and do not mention any messages related to "assigning tasks", "attendance", "check-in/check-out", or any automated bot logs.
-4. If the logs are just test messages, casual greetings, or excluded topics, state that there were no significant business activities.
+3. If the logs are just test messages or casual greetings, state that there were no significant business activities.
 
 --- LOGS START ---
 ${combinedText}
