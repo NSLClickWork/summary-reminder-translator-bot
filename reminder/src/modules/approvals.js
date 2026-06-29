@@ -62,6 +62,7 @@ async function handleInteraction(interaction) {
     if (btnId === 'btn_check_approvals') {
         const userId = interaction.user.id;
         try {
+            await interaction.deferReply({ ephemeral: true });
             const records = await base('Approvals').select({
                 filterByFormula: `AND({Status} = 'Pending', {Approver_Slack_ID} = '${userId}')`
             }).firstPage();
@@ -100,16 +101,17 @@ async function handleInteraction(interaction) {
                 });
             }
 
-            await interaction.reply({ embeds: [embed], components: components, ephemeral: true });
+            await interaction.editReply({ embeds: [embed], components: components });
         } catch (error) {
             console.error('Error fetching approvals:', error);
-            await interaction.reply({ content: '⚠️ **Database not ready**\nThe `Approvals` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Requester`, `Approver_Slack_ID`, `Status`, `Created_Date`.', ephemeral: true });
+            await interaction.editReply({ content: '⚠️ **Database not ready**\nThe `Approvals` table has not been set up in Airtable yet. Please ask the Admin to create it with fields: `Task_Name`, `Requester`, `Approver_Slack_ID`, `Status`, `Created_Date`.' });
         }
     } 
     else if (btnId.startsWith('btn_review_')) {
         const recordId = btnId.replace('btn_review_', '');
         
         try {
+            await interaction.deferUpdate();
             const record = await base('Approvals').find(recordId);
             const taskName = record.get('Task_Name') || 'Unknown Task';
             const requester = record.get('Requester') || 'Unknown';
@@ -139,15 +141,16 @@ async function handleInteraction(interaction) {
                 );
 
             // Update the ephemeral message with the review details
-            await interaction.update({ embeds: [embed], components: [row] });
+            await interaction.editReply({ embeds: [embed], components: [row] });
         } catch (error) {
             console.error('Error opening review:', error);
-            await interaction.reply({ content: '❌ Failed to load review details.', ephemeral: true });
+            await interaction.followUp({ content: '❌ Failed to load review details.', ephemeral: true });
         }
     }
     else if (btnId.startsWith('btn_approve_')) {
         const recordId = btnId.replace('btn_approve_', '');
         try {
+            await interaction.deferUpdate();
             await base('Approvals').update(recordId, { Status: 'Approved' });
             
             const embed = new EmbedBuilder()
@@ -155,15 +158,16 @@ async function handleInteraction(interaction) {
                 .setTitle('✅ Request Approved')
                 .setDescription('You have approved the request. Airtable has been updated.');
                 
-            await interaction.update({ embeds: [embed], components: [] }); // Remove buttons
+            await interaction.editReply({ embeds: [embed], components: [] }); // Remove buttons
         } catch (e) {
             console.error('Error approving record:', e);
-            await interaction.reply({ content: '❌ Failed to approve record.', ephemeral: true });
+            await interaction.followUp({ content: '❌ Failed to approve record.', ephemeral: true });
         }
     }
     else if (btnId.startsWith('btn_reject_')) {
         const recordId = btnId.replace('btn_reject_', '');
         try {
+            await interaction.deferUpdate();
             await base('Approvals').update(recordId, { Status: 'Rejected' });
             
             const embed = new EmbedBuilder()
@@ -171,10 +175,10 @@ async function handleInteraction(interaction) {
                 .setTitle('❌ Request Rejected')
                 .setDescription('You have rejected the request. Airtable has been updated.');
                 
-            await interaction.update({ embeds: [embed], components: [] }); // Remove buttons
+            await interaction.editReply({ embeds: [embed], components: [] }); // Remove buttons
         } catch (e) {
             console.error('Error rejecting record:', e);
-            await interaction.reply({ content: '❌ Failed to reject record.', ephemeral: true });
+            await interaction.followUp({ content: '❌ Failed to reject record.', ephemeral: true });
         }
     }
 }

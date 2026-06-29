@@ -54,11 +54,7 @@ function init(reminderBot) {
                         new ButtonBuilder()
                             .setCustomId('btn_mark_done')
                             .setLabel('✅ Mark as Done')
-                            .setStyle(ButtonStyle.Success),
-                        new ButtonBuilder()
-                            .setCustomId('btn_trigger_sync')
-                            .setLabel('🔄 Trigger Sync')
-                            .setStyle(ButtonStyle.Secondary)
+                            .setStyle(ButtonStyle.Success)
                     );
 
                 await interaction.reply({ embeds: [embed], components: [row] });

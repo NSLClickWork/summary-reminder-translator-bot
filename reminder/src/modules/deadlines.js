@@ -68,6 +68,7 @@ async function handleInteraction(interaction) {
 
             if (records.length === 0) {
                 embed.setDescription('🎉 You have no pending tasks or deadlines! Enjoy your day.');
+                await interaction.editReply({ embeds: [embed] });
             } else {
                 embed.setDescription('Here are your pending tasks sorted by deadline:');
                 
