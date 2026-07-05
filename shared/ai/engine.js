@@ -2,7 +2,7 @@ require('dotenv').config();
 const OpenAI = require('openai');
 
 let openai = null;
-const MODEL = process.env.AI_MODEL_NAME || 'llama3-70b-8192';
+const MODEL = process.env.AI_MODEL_NAME || 'llama-3.3-70b-versatile';
 
 function getOpenAI() {
     if (!openai) {
