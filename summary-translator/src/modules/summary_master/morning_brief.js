@@ -39,8 +39,8 @@ async function runMorningBriefCron(client) {
     const allChannels = client.channels.cache.filter(c => c.isTextBased() && !excludeChannels.includes(c.name));
 
     for (const [id, sourceChannel] of allChannels) {
-        let combinedText = '';
         try {
+            let combinedText = '';
             const messages = await sourceChannel.messages.fetch({ limit: 100 });
             if (messages.size > 0) {
                 // Check if there is at least one valid human message in the last 24 hours
@@ -59,14 +59,10 @@ async function runMorningBriefCron(client) {
                     }
                 }
             }
-        } catch (err) {
-            console.error(`Error fetching history for channel ${sourceChannel.name || sourceChannel.id}:`, err.message);
-            continue;
-        }
 
-        if (combinedText.trim() === '') continue;
+            if (combinedText.trim() === '') continue;
 
-        const prompt = `You are an Executive Assistant preparing a Summary Brief for the CEO. Read the following conversation logs from channel #${sourceChannel.name}.
+            const prompt = `You are an Executive Assistant preparing a Summary Brief for the CEO. Read the following conversation logs from channel #${sourceChannel.name}.
 Your task is to analyze the text and output a structured report in English.
 
 CRITICAL INSTRUCTIONS:
@@ -89,9 +85,21 @@ Format your response exactly like this:
 - [Decision/Action 2]
 `;
 
-        const aiSummary = await summarizeText(prompt);
+            const aiSummary = await summarizeText(prompt);
+            const fullMsg = `**🌅 Báo cáo tự động (Morning Brief):**\n\n${aiSummary}`;
 
-        await sourceChannel.send(`**🌅 Báo cáo tự động (Morning Brief):**\n\n${aiSummary}`);
+            if (fullMsg.length <= 2000) {
+                await sourceChannel.send(fullMsg);
+            } else {
+                const chunks = fullMsg.match(/[\s\S]{1,1900}/g) || [fullMsg];
+                for (const chunk of chunks) {
+                    await sourceChannel.send(chunk);
+                }
+            }
+        } catch (err) {
+            console.error(`Error in Morning Brief for #${sourceChannel.name || id}:`, err.message);
+            continue;
+        }
     }
 }
 
