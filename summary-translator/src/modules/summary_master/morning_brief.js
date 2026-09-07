@@ -96,6 +96,9 @@ Format your response exactly like this:
                     await sourceChannel.send(chunk);
                 }
             }
+
+            // Rate limit protection: pause 2.5s between channels
+            await new Promise(r => setTimeout(r, 2500));
         } catch (err) {
             console.error(`Error in Morning Brief for #${sourceChannel.name || id}:`, err.message);
             continue;
